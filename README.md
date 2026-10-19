@@ -31,7 +31,7 @@ FFmpeg and Pandoc are built in, so images, audio, video, PDFs, data files, archi
 * **Without installing:** [Rotary-portable.zip](https://github.com/TheNuc12/file_conversion_tool/releases/latest/download/Rotary-portable.zip) is the same app. Unzip it and run `Rotary.exe`.
 * **Release notes and older versions:** the [Releases page](https://github.com/TheNuc12/file_conversion_tool/releases).
 
-To publish a new version, bump `version` in `pyproject.toml` and `rotary/__init__.py`, then push a matching tag (`git tag v0.5.0 && git push origin v0.5.0`). The Windows workflow builds, tests and publishes it.
+To publish a new version, bump `version` in `pyproject.toml` and `rotary/__init__.py`. Then either push a matching tag (`git tag v0.5.0 && git push origin v0.5.0`), or open **Actions → Windows app → Run workflow** and tick **Publish a release**. The workflow builds, tests and publishes it.
 
 ### Using it on a work PC
 
