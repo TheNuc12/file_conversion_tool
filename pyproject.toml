@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rotary-convert"
+version = "0.1.0"
+description = "Convert files between image, audio, video, document, spreadsheet, data and archive formats, from the command line or a rotary-dial web UI."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "Pillow>=10.1",
+    "PyYAML>=6.0",
+    "openpyxl>=3.1",
+    "pypdfium2>=4.20",
+    "reportlab>=4.0",
+]
+
+[project.optional-dependencies]
+heic = ["pillow-heif>=0.16"]
+test = ["pytest>=8", "playwright>=1.40"]
+
+[project.scripts]
+rotary = "rotary.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["rotary*"]
+
+[tool.setuptools.package-data]
+"rotary.web" = ["static/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: starts LibreOffice or a browser",
+]

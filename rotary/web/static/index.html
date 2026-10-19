@@ -1,0 +1,802 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rotary Converter</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23333'/%3E%3Ccircle cx='16' cy='16' r='10' fill='%23666'/%3E%3Crect x='15' y='4' width='2' height='8' rx='1' fill='%23ff6a3d'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #f2efe9;
+  --panel: #fbfaf7;
+  --panel-2: #f4f1ea;
+  --text: #1c1b19;
+  --muted: #6a665e;
+  --faint: #a29d92;
+  --border: #dbd6cb;
+  --accent: #d9481f;
+  --accent-text: #ffffff;
+  --focus: #2f6fdb;
+  --ok: #1d8a52;
+  --bad: #c0352b;
+  --knob-edge-1: #8d8a84;
+  --knob-edge-2: #4d4b47;
+  --knob-face-1: #e9e6e0;
+  --knob-face-2: #b9b5ad;
+  --knurl: rgba(0, 0, 0, .28);
+  --track: #e6e1d7;
+  --shadow: rgba(40, 30, 10, .18);
+
+  --c-image: #c85a1e;
+  --c-audio: #7a4fd6;
+  --c-video: #c43361;
+  --c-document: #2565c4;
+  --c-spreadsheet: #18804f;
+  --c-presentation: #a87406;
+  --c-data: #0b7f8a;
+  --c-archive: #6b6f78;
+
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121214;
+    --panel: #1b1b1f;
+    --panel-2: #222227;
+    --text: #edebe6;
+    --muted: #a19e96;
+    --faint: #6e6b66;
+    --border: #303036;
+    --accent: #ff6a3d;
+    --accent-text: #1b0d07;
+    --focus: #7aa7ff;
+    --ok: #4cc488;
+    --bad: #ff7b6e;
+    --knob-edge-1: #5c5a57;
+    --knob-edge-2: #252423;
+    --knob-face-1: #4a4845;
+    --knob-face-2: #2a2927;
+    --knurl: rgba(0, 0, 0, .5);
+    --track: #2a2a30;
+    --shadow: rgba(0, 0, 0, .55);
+
+    --c-image: #ff9a5c;
+    --c-audio: #b393ff;
+    --c-video: #ff7aa2;
+    --c-document: #78aaff;
+    --c-spreadsheet: #5fd39a;
+    --c-presentation: #f2c14e;
+    --c-data: #4fd2dc;
+    --c-archive: #a9adb6;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121214; --panel: #1b1b1f; --panel-2: #222227; --text: #edebe6; --muted: #a19e96;
+  --faint: #6e6b66; --border: #303036; --accent: #ff6a3d; --accent-text: #1b0d07; --focus: #7aa7ff;
+  --ok: #4cc488; --bad: #ff7b6e; --knob-edge-1: #5c5a57; --knob-edge-2: #252423; --knob-face-1: #4a4845;
+  --knob-face-2: #2a2927; --knurl: rgba(0,0,0,.5); --track: #2a2a30; --shadow: rgba(0,0,0,.55);
+  --c-image: #ff9a5c; --c-audio: #b393ff; --c-video: #ff7aa2; --c-document: #78aaff;
+  --c-spreadsheet: #5fd39a; --c-presentation: #f2c14e; --c-data: #4fd2dc; --c-archive: #a9adb6;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.5 var(--sans);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.wrap { max-width: 1080px; margin: 0 auto; padding: 28px 16px 40px; }
+
+header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+header svg { width: 34px; height: 34px; flex: none; }
+header h1 { font-size: 22px; letter-spacing: -.01em; margin: 0; line-height: 1.1; }
+header p { margin: 0; color: var(--muted); font-size: 14px; }
+
+.deck { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .deck { grid-template-columns: minmax(0, 1fr); } }
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+}
+.panel h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 12px; font-weight: 600; }
+
+/* ---------------------------------------------------------------- input */
+.drop {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  min-height: 150px; padding: 20px; text-align: center; cursor: pointer;
+  border: 2px dashed var(--border); border-radius: 12px; background: var(--panel-2);
+  transition: border-color .15s, background .15s;
+}
+.drop:hover, .drop.over { border-color: var(--accent); }
+.drop.over { background: color-mix(in srgb, var(--accent) 8%, var(--panel-2)); }
+.drop strong { font-size: 16px; }
+.drop span { color: var(--muted); font-size: 13px; }
+.drop input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.drop:focus-within { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.files { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.file {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px 10px; align-items: center;
+  padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--panel);
+}
+.file .tag {
+  font: 600 11px/1 var(--mono); padding: 5px 6px; border-radius: 6px; min-width: 44px; text-align: center;
+  color: var(--cat, var(--muted)); background: color-mix(in srgb, var(--cat, var(--muted)) 14%, transparent);
+}
+.file .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+.file .meta { grid-column: 2 / 4; font-size: 12.5px; color: var(--muted); display: flex; gap: 10px; align-items: center; min-width: 0; }
+.file .meta .msg { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.file.error .meta .msg { color: var(--bad); white-space: normal; }
+.file.done .meta .msg { color: var(--ok); }
+.file .x {
+  border: 0; background: none; color: var(--faint); cursor: pointer; width: 28px; height: 28px; border-radius: 6px;
+  font-size: 18px; line-height: 1;
+}
+.file .x:hover { color: var(--text); background: var(--panel-2); }
+.file a.dl {
+  font-size: 13px; font-weight: 600; color: var(--accent); text-decoration: none; white-space: nowrap;
+  padding: 4px 10px; border: 1px solid currentColor; border-radius: 999px;
+}
+.file a.dl:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.bar { grid-column: 1 / 4; height: 4px; border-radius: 4px; background: var(--track); overflow: hidden; display: none; }
+.file.busy .bar { display: block; }
+.bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .15s; }
+.file.converting .bar i {
+  width: 40% !important; animation: slide 1.1s ease-in-out infinite;
+}
+@keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+
+.batch { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; gap: 10px; flex-wrap: wrap; }
+.linkish { border: 0; background: none; padding: 4px 0; color: var(--muted); cursor: pointer; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
+.linkish:hover { color: var(--text); }
+
+/* ---------------------------------------------------------------- dial */
+.dial-panel { display: flex; flex-direction: column; align-items: center; }
+.dial-panel h2 { align-self: flex-start; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; min-height: 30px; margin-bottom: 4px; }
+.chip {
+  border: 1px solid var(--border); background: var(--panel); border-radius: 999px; padding: 3px 11px;
+  font-size: 12.5px; cursor: pointer; color: var(--muted); display: inline-flex; gap: 6px; align-items: center;
+}
+.chip::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--cat, var(--faint)); }
+.chip[data-cat="all"]::before { display: none; }
+.chip b { font-weight: 600; color: var(--faint); font-size: 11.5px; }
+.chip[aria-pressed="true"] { color: var(--text); border-color: var(--text); }
+.chip:hover { color: var(--text); }
+
+.dial {
+  position: relative; width: min(100%, 440px); aspect-ratio: 1; margin: 6px auto 0;
+  touch-action: none; user-select: none; -webkit-user-select: none; border-radius: 50%;
+}
+.dial svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.dial:focus-visible { outline-offset: 6px; }
+.dial.disabled .knob-hit { cursor: default; }
+.knob-hit { cursor: grab; }
+.dial.dragging .knob-hit { cursor: grabbing; }
+
+.track { fill: none; stroke: var(--track); stroke-width: 22; }
+.tick { stroke: var(--faint); stroke-width: 2; stroke-linecap: round; }
+.tick.on { stroke: var(--accent); stroke-width: 3.5; }
+.label {
+  font-family: var(--mono); font-weight: 500; fill: var(--muted); cursor: pointer; transition: fill .15s;
+}
+.label:hover { fill: var(--text); }
+.label.on { fill: var(--cat, var(--accent)); font-weight: 700; }
+.knob { transition: transform .22s cubic-bezier(.3, 1.4, .5, 1); }
+.dial.dragging .knob { transition-duration: .08s; }
+.knob-edge { fill: url(#edge); }
+.knurl line { stroke: var(--knurl); stroke-width: 1.4; }
+.knob-face { fill: url(#face); }
+.pointer { stroke: var(--accent); stroke-width: 6; stroke-linecap: round; }
+.dial.disabled .pointer { stroke: var(--faint); }
+.gloss { fill: url(#gloss); pointer-events: none; }
+.placeholder { fill: var(--faint); font: 13px var(--sans); }
+
+.readout {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  pointer-events: none; text-align: center; padding: 0 32%;
+}
+.readout .big { font: 700 clamp(22px, 6.5vw, 34px)/1 var(--mono); letter-spacing: .02em; color: var(--text); text-shadow: 0 1px 0 rgba(255,255,255,.25); }
+.readout .small { margin-top: 6px; font-size: 12px; color: var(--muted); line-height: 1.25; }
+.dial.disabled .readout .big { color: var(--faint); font-size: 18px; font-family: var(--sans); font-weight: 600; }
+
+.route { margin: 10px 0 0; min-height: 22px; font-size: 13px; color: var(--muted); text-align: center; }
+.route code { font-family: var(--mono); color: var(--text); }
+
+.opts { display: flex; flex-wrap: wrap; gap: 14px 18px; justify-content: center; margin-top: 12px; font-size: 13px; color: var(--muted); }
+.opts label { display: inline-flex; align-items: center; gap: 8px; }
+.opts input[type="number"] { width: 72px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel-2); }
+.opts input[type="range"] { accent-color: var(--accent); width: 140px; }
+.opts output { font-family: var(--mono); color: var(--text); min-width: 2.5ch; }
+
+.go {
+  margin-top: 16px; width: min(100%, 360px); padding: 13px 18px; border: 0; border-radius: 12px;
+  background: var(--accent); color: var(--accent-text); font-weight: 650; font-size: 16px; cursor: pointer;
+  box-shadow: 0 6px 18px -8px var(--accent); transition: transform .08s, opacity .15s;
+}
+.go:hover:not(:disabled) { transform: translateY(-1px); }
+.go:active:not(:disabled) { transform: translateY(1px); }
+.go:disabled { opacity: .4; cursor: not-allowed; box-shadow: none; }
+.hint { margin-top: 8px; font-size: 12px; color: var(--faint); text-align: center; }
+.hint kbd { font: 11px var(--mono); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; }
+
+footer { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--muted); justify-content: center; }
+footer .be { display: inline-flex; align-items: center; gap: 6px; }
+footer .be::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+footer .be.off { color: var(--faint); }
+footer .be.off::before { background: var(--faint); }
+
+@media (prefers-reduced-motion: reduce) {
+  .knob, .bar i { transition: none; }
+  .file.converting .bar i { animation: none; width: 100% !important; opacity: .5; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <svg viewBox="0 0 34 34" aria-hidden="true">
+      <circle cx="17" cy="17" r="16" style="fill: var(--knob-edge-2)"/>
+      <circle cx="17" cy="17" r="12" style="fill: var(--knob-face-2)"/>
+      <rect x="15.5" y="3.5" width="3" height="10" rx="1.5" style="fill: var(--accent)"/>
+    </svg>
+    <div>
+      <h1>Rotary</h1>
+      <p>Drop in a file, turn the dial, get it back in the format you need.</p>
+    </div>
+  </header>
+
+  <div class="deck">
+    <section class="panel" aria-labelledby="in-h">
+      <h2 id="in-h">1 · Files</h2>
+      <label class="drop" id="drop">
+        <input type="file" id="picker" multiple>
+        <strong>Drop files here</strong>
+        <span>or click to choose. Images, audio, video, documents, spreadsheets, data, archives.</span>
+      </label>
+      <ul class="files" id="files" aria-live="polite"></ul>
+      <div class="batch" id="batch" hidden>
+        <button class="linkish" id="clear" type="button">Clear all</button>
+        <button class="linkish" id="dlall" type="button" hidden>Download all</button>
+      </div>
+    </section>
+
+    <section class="panel dial-panel" aria-labelledby="out-h">
+      <h2 id="out-h">2 · Turn to a format</h2>
+      <div class="chips" id="chips" role="group" aria-label="Filter formats by kind"></div>
+      <div class="dial disabled" id="dial" role="slider" tabindex="0" aria-label="Target format"
+           aria-valuemin="1" aria-valuemax="1" aria-valuenow="1" aria-valuetext="No file yet" aria-disabled="true">
+        <svg viewBox="-200 -200 400 400" aria-hidden="true">
+          <defs>
+            <radialGradient id="face" cx="40%" cy="32%" r="78%">
+              <stop offset="0" style="stop-color: var(--knob-face-1)"/>
+              <stop offset="1" style="stop-color: var(--knob-face-2)"/>
+            </radialGradient>
+            <linearGradient id="edge" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" style="stop-color: var(--knob-edge-1)"/>
+              <stop offset="1" style="stop-color: var(--knob-edge-2)"/>
+            </linearGradient>
+            <radialGradient id="gloss" cx="38%" cy="22%" r="60%">
+              <stop offset="0" stop-color="#fff" stop-opacity=".35"/>
+              <stop offset=".6" stop-color="#fff" stop-opacity="0"/>
+            </radialGradient>
+            <filter id="drop-shadow" x="-30%" y="-30%" width="160%" height="160%">
+              <feDropShadow dx="0" dy="8" stdDeviation="9" style="flood-color: var(--shadow)"/>
+            </filter>
+          </defs>
+          <circle class="track" r="146"/>
+          <g id="ticks"></g>
+          <g id="labels"></g>
+          <g class="knob-hit" id="knob-hit">
+            <g filter="url(#drop-shadow)">
+              <g class="knob" id="knob">
+                <circle class="knob-edge" r="122"/>
+                <g class="knurl" id="knurl"></g>
+                <circle class="knob-face" r="106"/>
+                <line class="pointer" x1="0" y1="-74" x2="0" y2="-98"/>
+              </g>
+            </g>
+            <circle class="gloss" r="106"/>
+          </g>
+        </svg>
+        <div class="readout"><div class="big" id="big">Add a file</div><div class="small" id="small">to see what it can become</div></div>
+      </div>
+      <p class="route" id="route"></p>
+      <div class="opts" id="opts">
+        <label id="opt-quality" hidden>Quality <input type="range" id="quality" min="10" max="100" step="1" value="85"><output id="quality-out">85</output></label>
+        <label id="opt-page" hidden>Page <input type="number" id="page" min="1" value="1"></label>
+        <label id="opt-dpi" hidden>DPI <input type="number" id="dpi" min="36" max="1200" step="1" value="150"></label>
+      </div>
+      <button class="go" id="go" type="button" disabled>Convert</button>
+      <p class="hint">Drag the knob, scroll over it, or focus it and use <kbd>←</kbd> <kbd>→</kbd>. <kbd>Enter</kbd> converts.</p>
+    </section>
+  </div>
+  <footer id="backends"></footer>
+</div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const SVG = "http://www.w3.org/2000/svg";
+const LOSSY = new Set(["jpeg", "webp", "avif", "jp2", "heic"]);
+const RADIAL_AT = 25;      // more targets than this and labels are set radially
+const FILTER_AT = 24;      // more than this and we start on the source's own category
+
+const state = {
+  formats: {}, categories: [],
+  files: [],               // {id, file, source, routes, unusable, status, progress, message, url, outName, doneTarget}
+  targets: [],             // [{id, steps}] common to every usable file
+  filter: "all",
+  visible: [],             // targets shown on the dial after filtering
+  index: 0,
+  angle: 0,
+  busy: false,
+};
+let nextId = 1;
+
+function el(tag, attrs = {}, text) {
+  const node = tag.startsWith("svg:") ? document.createElementNS(SVG, tag.slice(4)) : document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  if (text != null) node.textContent = text;
+  return node;
+}
+const fmt = (id) => state.formats[id] || { label: id, category: "", extension: id };
+const ext = (id) => fmt(id).extension.toUpperCase();
+const catVar = (id) => `var(--c-${fmt(id).category})`;
+function humanSize(n) {
+  const u = ["B", "KB", "MB", "GB"]; let i = 0;
+  while (n >= 1024 && i < u.length - 1) { n /= 1024; i++; }
+  return `${n < 10 && i ? n.toFixed(1) : Math.round(n)} ${u[i]}`;
+}
+
+// ------------------------------------------------------------------ boot
+async function boot() {
+  const res = await fetch("/api/formats");
+  const data = await res.json();
+  state.formats = data.formats;
+  state.categories = data.categories;
+  const foot = $("backends");
+  for (const b of data.backends) {
+    const span = el("span", { class: "be" + (b.available ? "" : " off"), title: b.available ? "Installed" : b.requirement }, b.label);
+    foot.append(span);
+  }
+  buildKnurl();
+  render();
+}
+
+function buildKnurl() {
+  const g = $("knurl");
+  for (let i = 0; i < 72; i++) {
+    const a = (i / 72) * Math.PI * 2;
+    g.append(el("svg:line", {
+      x1: (Math.sin(a) * 108).toFixed(2), y1: (-Math.cos(a) * 108).toFixed(2),
+      x2: (Math.sin(a) * 121).toFixed(2), y2: (-Math.cos(a) * 121).toFixed(2),
+    }));
+  }
+}
+
+// ------------------------------------------------------------------ files
+async function addFiles(list) {
+  const added = [];
+  for (const file of list) {
+    const item = { id: nextId++, file, source: null, routes: null, unusable: false, status: "idle", progress: 0, message: "", url: null, outName: null, doneTarget: null };
+    state.files.push(item);
+    added.push(item);
+  }
+  render();
+  await Promise.all(added.map(async (item) => {
+    try {
+      const res = await fetch("/api/targets?file=" + encodeURIComponent(item.file.name));
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Unrecognized file");
+      item.source = data.source;
+      item.routes = new Map(data.targets.map((t) => [t.id, t]));
+      if (!item.routes.size) { item.unusable = true; item.message = "Nothing installed can convert this kind of file"; }
+    } catch (err) {
+      item.unusable = true;
+      item.message = err.message.includes("Can't tell") ? "Unknown file type (no recognizable extension)" : err.message;
+    }
+  }));
+  recompute();
+}
+
+function usableFiles() {
+  return state.files.filter((f) => f.routes && f.routes.size && !f.unusable);
+}
+
+function recompute() {
+  const usable = usableFiles();
+  const previous = state.visible[state.index]?.id;
+  if (!usable.length) {
+    state.targets = [];
+  } else {
+    const [first, ...rest] = usable;
+    state.targets = [...first.routes.values()].filter((t) => rest.every((f) => f.routes.has(t.id)));
+  }
+  const cats = new Set(state.targets.map((t) => fmt(t.id).category));
+  if (state.filter !== "all" && !cats.has(state.filter)) state.filter = "all";
+  if (state.targets.length > FILTER_AT && state.filter === "all" && !state.filterTouched) {
+    const own = fmt(usable[0].source).category;
+    const pick = cats.has(own) ? own : [...cats][0];
+    if (pick) state.filter = pick;
+  }
+  applyFilter(previous);
+}
+
+function applyFilter(keepId) {
+  state.visible = state.filter === "all" ? state.targets : state.targets.filter((t) => fmt(t.id).category === state.filter);
+  let i = state.visible.findIndex((t) => t.id === keepId);
+  if (i < 0) i = 0;
+  state.index = i;
+  state.angle = state.visible.length ? (i * 360) / state.visible.length : 0;
+  render();
+}
+
+// ------------------------------------------------------------------ dial
+function step() { return 360 / Math.max(state.visible.length, 1); }
+
+function select(i, { animate = true } = {}) {
+  const n = state.visible.length;
+  if (!n) return;
+  i = ((i % n) + n) % n;
+  if (i === state.index) return;
+  // Turn the short way round, so going from the last stop to the first is one click.
+  let delta = i - state.index;
+  if (delta > n / 2) delta -= n;
+  if (delta < -n / 2) delta += n;
+  state.angle += delta * step();
+  state.index = i;
+  if (!animate) $("knob").style.transitionDuration = "0s";
+  updateDial();
+  if (!animate) requestAnimationFrame(() => { $("knob").style.transitionDuration = ""; });
+  if (navigator.vibrate && dragging) navigator.vibrate(4);
+}
+
+function renderDial() {
+  const dial = $("dial");
+  const ticks = $("ticks"), labels = $("labels");
+  ticks.replaceChildren(); labels.replaceChildren();
+  const n = state.visible.length;
+  dial.classList.toggle("disabled", !n);
+  dial.setAttribute("aria-disabled", String(!n));
+
+  if (!n) {
+    for (let i = 0; i < 24; i++) {
+      const a = (i / 24) * Math.PI * 2;
+      ticks.append(el("svg:line", { class: "tick", x1: Math.sin(a) * 132, y1: -Math.cos(a) * 132, x2: Math.sin(a) * 138, y2: -Math.cos(a) * 138 }));
+    }
+    updateDial();
+    return;
+  }
+
+  const radial = n > RADIAL_AT;
+  const size = radial ? 10.5 : n <= 10 ? 15 : n <= 16 ? 14 : 12.5;
+  state.visible.forEach((t, i) => {
+    const deg = i * step();
+    const a = (deg * Math.PI) / 180;
+    const sin = Math.sin(a), cos = Math.cos(a);
+    ticks.append(el("svg:line", {
+      class: "tick", "data-i": i,
+      x1: (sin * 130).toFixed(2), y1: (-cos * 130).toFixed(2), x2: (sin * 140).toFixed(2), y2: (-cos * 140).toFixed(2),
+    }));
+    let label;
+    if (radial) {
+      const left = deg > 180;
+      const r = 153;
+      label = el("svg:text", {
+        class: "label", "data-i": i,
+        x: (sin * r).toFixed(2), y: (-cos * r).toFixed(2),
+        "text-anchor": left ? "end" : "start", "dominant-baseline": "central",
+        transform: `rotate(${(left ? deg + 90 : deg - 90).toFixed(2)} ${(sin * r).toFixed(2)} ${(-cos * r).toFixed(2)})`,
+      }, ext(t.id));
+    } else {
+      const r = 170;
+      label = el("svg:text", {
+        class: "label", "data-i": i,
+        x: (sin * r).toFixed(2), y: (-cos * r).toFixed(2),
+        "text-anchor": "middle", "dominant-baseline": "central",
+      }, ext(t.id));
+    }
+    label.style.setProperty("--cat", catVar(t.id));
+    label.style.fontSize = `${size}px`;
+    label.addEventListener("click", () => select(i));
+    labels.append(label);
+  });
+  updateDial();
+}
+
+function updateDial() {
+  const dial = $("dial");
+  const n = state.visible.length;
+  $("knob").style.transform = `rotate(${state.angle}deg)`;
+  document.querySelectorAll("#ticks .tick, #labels .label").forEach((node) => {
+    node.classList.toggle("on", Number(node.dataset.i) === state.index && n > 0);
+  });
+  const big = $("big"), small = $("small");
+  if (!n) {
+    const hasFiles = state.files.length > 0;
+    const pending = state.files.some((f) => !f.routes && !f.unusable);
+    big.textContent = !hasFiles ? "Add a file" : pending ? "Reading…" : "No match";
+    small.textContent = !hasFiles ? "to see what it can become" : pending ? "" : "these files share no target format";
+    dial.setAttribute("aria-valuetext", big.textContent);
+    $("route").textContent = "";
+  } else {
+    const t = state.visible[state.index];
+    big.textContent = ext(t.id);
+    small.textContent = fmt(t.id).label;
+    big.style.color = "";
+    dial.setAttribute("aria-valuemax", String(n));
+    dial.setAttribute("aria-valuenow", String(state.index + 1));
+    dial.setAttribute("aria-valuetext", `${ext(t.id)}, ${fmt(t.id).label}`);
+    renderRoute(t.id);
+  }
+  renderOptions();
+  renderGo();
+}
+
+function renderRoute(target) {
+  const route = $("route");
+  route.replaceChildren();
+  const usable = usableFiles();
+  if (!usable.length) return;
+  const steps = usable[0].routes.get(target)?.steps || [];
+  const chain = [steps[0]?.from ?? usable[0].source, ...steps.map((s) => s.to)].map(ext).join(" → ");
+  const via = [...new Set(steps.map((s) => s.via))].join(", ");
+  route.append(el("code", {}, chain), document.createTextNode(` · ${steps.length} step${steps.length === 1 ? "" : "s"} · ${via}`));
+  const others = new Set(usable.map((f) => f.source)).size - 1;
+  if (others > 0) route.append(document.createTextNode(` · +${others} other source type${others === 1 ? "" : "s"}`));
+}
+
+function renderOptions() {
+  const t = state.visible[state.index]?.id;
+  const usable = usableFiles();
+  const steps = t && usable.length ? usable.flatMap((f) => f.routes.get(t)?.steps || []) : [];
+  const renders = steps.some((s) => s.from === "pdf" && fmt(s.to).category === "image");
+  $("opt-quality").hidden = !(t && LOSSY.has(t));
+  $("opt-page").hidden = !renders;
+  $("opt-dpi").hidden = !renders;
+}
+
+// Files still to convert to the selected target (ones already done for it are skipped).
+function todoFor(target) {
+  return usableFiles().filter((f) => !(f.status === "done" && f.doneTarget === target));
+}
+
+function renderGo() {
+  const go = $("go");
+  const t = state.visible[state.index];
+  const pending = t ? todoFor(t.id).length : 0;
+  go.disabled = state.busy || !pending;
+  if (state.busy) go.textContent = "Converting…";
+  else if (!t) go.textContent = "Convert";
+  else if (!pending) go.textContent = `Converted to ${ext(t.id)}`;
+  else go.textContent = `Convert ${pending} ${pending === 1 ? "file" : "files"} to ${ext(t.id)}`;
+}
+
+function renderChips() {
+  const chips = $("chips");
+  chips.replaceChildren();
+  if (!state.targets.length) return;
+  const counts = new Map();
+  for (const t of state.targets) {
+    const c = fmt(t.id).category;
+    counts.set(c, (counts.get(c) || 0) + 1);
+  }
+  if (counts.size < 2) return;
+  const make = (cat, text, count) => {
+    const b = el("button", { class: "chip", type: "button", "data-cat": cat, "aria-pressed": String(state.filter === cat) });
+    b.append(document.createTextNode(text), el("b", {}, String(count)));
+    if (cat !== "all") b.style.setProperty("--cat", `var(--c-${cat})`);
+    b.addEventListener("click", () => {
+      state.filter = cat;
+      state.filterTouched = true;
+      applyFilter(state.visible[state.index]?.id);
+    });
+    chips.append(b);
+  };
+  make("all", "All", state.targets.length);
+  for (const cat of state.categories) if (counts.has(cat)) make(cat, cat[0].toUpperCase() + cat.slice(1), counts.get(cat));
+}
+
+function renderFiles() {
+  const list = $("files");
+  list.replaceChildren();
+  for (const f of state.files) {
+    const cls = f.unusable || f.status === "failed" ? "error" : f.status;
+    const li = el("li", { class: `file ${cls}` + (["uploading", "converting"].includes(f.status) ? " busy" : "") });
+    const tag = el("span", { class: "tag" }, f.source ? ext(f.source) : "?");
+    if (f.source) tag.style.setProperty("--cat", catVar(f.source));
+    const name = el("span", { class: "name", title: f.file.name }, f.file.name);
+    let action;
+    if (f.status === "done" && f.url) {
+      action = el("a", { class: "dl", href: f.url, download: f.outName }, "Download");
+    } else if (!state.busy) {
+      action = el("button", { class: "x", type: "button", "aria-label": `Remove ${f.file.name}` }, "×");
+      action.addEventListener("click", () => removeFile(f.id));
+    } else {
+      action = el("span");
+    }
+    const meta = el("span", { class: "meta" });
+    meta.append(el("span", {}, humanSize(f.file.size)));
+    const msg = f.message || (f.status === "uploading" ? `Uploading ${Math.round(f.progress * 100)}%` : f.status === "converting" ? "Converting…" : "");
+    if (msg) meta.append(el("span", { class: "msg", title: msg }, msg));
+    const bar = el("span", { class: "bar" });
+    const fill = el("i");
+    fill.style.width = `${Math.round(f.progress * 100)}%`;
+    bar.append(fill);
+    li.append(tag, name, action, meta, bar);
+    list.append(li);
+  }
+  $("batch").hidden = !state.files.length;
+  $("dlall").hidden = state.files.filter((f) => f.url).length < 2;
+}
+
+function render() {
+  renderFiles();
+  renderChips();
+  renderDial();
+}
+
+function removeFile(id) {
+  const f = state.files.find((x) => x.id === id);
+  if (f?.url) URL.revokeObjectURL(f.url);
+  state.files = state.files.filter((x) => x.id !== id);
+  recompute();
+}
+
+// ------------------------------------------------------------------ converting
+function upload(item, target) {
+  return new Promise((resolve) => {
+    const params = new URLSearchParams({ name: item.file.name, to: target });
+    if (!$("opt-quality").hidden) params.set("quality", $("quality").value);
+    if (!$("opt-page").hidden) { params.set("page", $("page").value); params.set("dpi", $("dpi").value); }
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", "/api/convert?" + params);
+    xhr.setRequestHeader("X-Rotary", "1");
+    xhr.setRequestHeader("Content-Type", "application/octet-stream");
+    xhr.responseType = "blob";
+    item.status = "uploading"; item.progress = 0; item.message = "";
+    if (item.url) { URL.revokeObjectURL(item.url); item.url = null; }
+    renderFiles();
+    xhr.upload.onprogress = (e) => {
+      if (!e.lengthComputable) return;
+      item.progress = e.loaded / e.total;
+      renderFiles();
+    };
+    xhr.upload.onload = () => { item.status = "converting"; renderFiles(); };
+    xhr.onload = async () => {
+      if (xhr.status === 200) {
+        const name = decodeURIComponent(xhr.getResponseHeader("X-Rotary-Filename") || "converted");
+        item.url = URL.createObjectURL(xhr.response);
+        item.outName = name;
+        item.status = "done";
+        item.doneTarget = target;
+        item.progress = 1;
+        item.message = `→ ${name} (${humanSize(xhr.response.size)})`;
+      } else {
+        let message = `Failed (HTTP ${xhr.status})`;
+        try { message = JSON.parse(await xhr.response.text()).error || message; } catch {}
+        item.status = "failed";
+        item.message = message;
+      }
+      resolve();
+    };
+    xhr.onerror = () => { item.status = "failed"; item.message = "Lost connection to Rotary. Is it still running?"; resolve(); };
+    xhr.send(item.file);
+  });
+}
+
+async function convertAll() {
+  const t = state.visible[state.index];
+  if (!t || state.busy) return;
+  const todo = todoFor(t.id);
+  if (!todo.length) return;
+  state.busy = true;
+  renderGo();
+  for (const item of todo) await upload(item, t.id);
+  state.busy = false;
+  renderFiles();
+  renderGo();
+  const done = todo.filter((f) => f.status === "done");
+  if (todo.length === 1 && done.length === 1) triggerDownload(done[0]);
+}
+
+function triggerDownload(f) {
+  const a = el("a", { href: f.url, download: f.outName });
+  document.body.append(a); a.click(); a.remove();
+}
+
+// ------------------------------------------------------------------ input wiring
+const drop = $("drop"), picker = $("picker");
+picker.addEventListener("change", () => { addFiles([...picker.files]); picker.value = ""; });
+["dragenter", "dragover"].forEach((ev) => document.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach((ev) => document.addEventListener(ev, (e) => {
+  e.preventDefault();
+  if (ev === "dragleave" && e.relatedTarget) return;
+  drop.classList.remove("over");
+}));
+document.addEventListener("drop", (e) => { if (e.dataTransfer?.files?.length) addFiles([...e.dataTransfer.files]); });
+
+$("clear").addEventListener("click", () => {
+  if (state.busy) return;
+  state.files.forEach((f) => f.url && URL.revokeObjectURL(f.url));
+  state.files = [];
+  state.filterTouched = false;
+  recompute();
+});
+$("dlall").addEventListener("click", async () => {
+  for (const f of state.files.filter((x) => x.url)) { triggerDownload(f); await new Promise((r) => setTimeout(r, 250)); }
+});
+$("go").addEventListener("click", convertAll);
+$("quality").addEventListener("input", () => { $("quality-out").textContent = $("quality").value; });
+
+// Dragging the knob
+let dragging = false;
+const dial = $("dial");
+function pointerAngle(e) {
+  const r = dial.getBoundingClientRect();
+  const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+  return ((Math.atan2(dx, -dy) * 180) / Math.PI + 360) % 360;
+}
+function onTurn(e) {
+  const i = Math.round(pointerAngle(e) / step()) % state.visible.length;
+  if (i !== state.index) select(i);
+}
+$("knob-hit").addEventListener("pointerdown", (e) => {
+  if (!state.visible.length) return;
+  dragging = true;
+  dial.classList.add("dragging");
+  dial.setPointerCapture(e.pointerId);
+  dial.focus({ preventScroll: true });
+  onTurn(e);
+});
+dial.addEventListener("pointermove", (e) => { if (dragging) onTurn(e); });
+const stopDrag = () => { dragging = false; dial.classList.remove("dragging"); };
+dial.addEventListener("pointerup", stopDrag);
+dial.addEventListener("pointercancel", stopDrag);
+
+// Scrolling over the dial
+let wheelAcc = 0;
+dial.addEventListener("wheel", (e) => {
+  if (!state.visible.length) return;
+  e.preventDefault();
+  wheelAcc += e.deltaY || e.deltaX;
+  if (Math.abs(wheelAcc) >= 40) {
+    select(state.index + Math.sign(wheelAcc));
+    wheelAcc = 0;
+  }
+}, { passive: false });
+
+// Keyboard
+dial.addEventListener("keydown", (e) => {
+  const n = state.visible.length;
+  if (!n) return;
+  const moves = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1, PageDown: 5, PageUp: -5 };
+  if (e.key in moves) { e.preventDefault(); select(state.index + moves[e.key]); }
+  else if (e.key === "Home") { e.preventDefault(); select(0); }
+  else if (e.key === "End") { e.preventDefault(); select(n - 1); }
+  else if (e.key === "Enter") { e.preventDefault(); convertAll(); }
+});
+
+boot().catch((err) => {
+  $("big").textContent = "Offline";
+  $("small").textContent = "Couldn't reach the Rotary server: " + err.message;
+});
+</script>
+</body>
+</html>
