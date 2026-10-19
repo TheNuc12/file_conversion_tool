@@ -1,0 +1,86 @@
+/* Rotary Sign viewer and dialog. Inherits the host page's colour tokens where present. */
+.rs-doc { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 8px 0 24px; }
+.rs-page-wrap { width: min(100%, 860px); }
+.rs-page {
+  position: relative; width: 100%; background: #fff; box-shadow: 0 2px 10px rgba(0, 0, 0, .18);
+  user-select: none; -webkit-user-select: none;
+}
+.rs-page img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; pointer-events: none; }
+.rs-layer { position: absolute; inset: 0; }
+.rs-page-no { text-align: center; font-size: 12px; color: var(--muted, #6a665e); margin-top: 6px; }
+.rs-placing .rs-layer { cursor: crosshair; }
+
+.rs-field {
+  --rs-color: var(--accent, #d9481f);
+  position: absolute; box-sizing: border-box; border: 1.5px dashed var(--rs-color);
+  background: color-mix(in srgb, var(--rs-color) 10%, transparent); border-radius: 3px;
+  touch-action: none; cursor: move; outline: none;
+}
+.rs-field.rs-filled { border-style: solid; border-color: color-mix(in srgb, var(--rs-color) 45%, transparent); background: transparent; }
+.rs-field.rs-selected, .rs-field:focus-visible { border-style: solid; border-color: var(--rs-color); box-shadow: 0 0 0 3px color-mix(in srgb, var(--rs-color) 25%, transparent); }
+.rs-field.rs-missing { animation: rs-pulse 1.6s ease-in-out infinite; }
+.rs-field.rs-readonly { cursor: default; border-color: transparent; background: transparent; }
+.rs-field.rs-dragging { opacity: .85; }
+@keyframes rs-pulse { 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--rs-color) 30%, transparent); } }
+
+.rs-content { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.rs-content img { max-width: 100%; max-height: 100%; object-fit: contain; pointer-events: none; }
+.rs-content input {
+  width: 100%; height: 100%; border: 0; background: transparent; padding: 0 3px; margin: 0;
+  font: 13px/1 Helvetica, Arial, sans-serif; color: #111; outline: none; cursor: text;
+}
+.rs-tag {
+  font: 600 11px/1.1 var(--sans, system-ui, sans-serif); color: var(--rs-color); text-align: center;
+  padding: 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none;
+}
+.rs-signature .rs-content, .rs-initials .rs-content, .rs-checkbox .rs-content { cursor: pointer; }
+.rs-mode-design .rs-content { cursor: move; }
+.rs-text { font: 13px/1 Helvetica, Arial, sans-serif; color: #111; padding: 0 3px; width: 100%; white-space: nowrap; }
+.rs-tick { font: 700 1em/1 system-ui, sans-serif; color: #111; font-size: 140%; }
+.rs-checkbox .rs-content { font-size: clamp(8px, 1.6vw, 18px); }
+
+.rs-del {
+  position: absolute; top: -10px; right: -10px; width: 20px; height: 20px; border-radius: 50%; border: 0;
+  background: var(--rs-color); color: #fff; font: 700 13px/20px system-ui, sans-serif; padding: 0; cursor: pointer;
+  display: none; z-index: 2;
+}
+.rs-grip {
+  position: absolute; right: -5px; bottom: -5px; width: 10px; height: 10px; background: var(--rs-color);
+  border-radius: 2px; cursor: nwse-resize; display: none; z-index: 2;
+}
+.rs-field.rs-selected .rs-del, .rs-field.rs-selected .rs-grip,
+.rs-field:hover .rs-del, .rs-field:hover .rs-grip { display: block; }
+
+.rs-dialog {
+  border: 1px solid var(--border, #dbd6cb); border-radius: 14px; padding: 20px; width: min(560px, calc(100vw - 32px));
+  background: var(--panel, #fff); color: var(--text, #1c1b19); box-shadow: 0 20px 60px rgba(0, 0, 0, .3);
+}
+.rs-dialog::backdrop { background: rgba(0, 0, 0, .45); }
+.rs-dialog h3 { margin: 0 0 12px; font-size: 18px; }
+.rs-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.rs-tab {
+  border: 1px solid var(--border, #dbd6cb); background: transparent; border-radius: 999px; padding: 4px 14px;
+  cursor: pointer; color: var(--muted, #6a665e); font: inherit;
+}
+.rs-tab[aria-selected="true"] { color: var(--text, #1c1b19); border-color: var(--text, #1c1b19); }
+.rs-pane { display: flex; flex-direction: column; gap: 8px; }
+.rs-pad {
+  width: 100%; height: 170px; border: 1px dashed var(--border, #dbd6cb); border-radius: 10px; background: #fff;
+  touch-action: none; cursor: crosshair;
+}
+.rs-typed-input {
+  width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--border, #dbd6cb); border-radius: 8px;
+  font: inherit; background: var(--panel-2, #f6f4ef); color: inherit;
+}
+.rs-typed-preview {
+  min-height: 90px; display: flex; align-items: center; justify-content: center; background: #fff; border-radius: 10px;
+  border: 1px dashed var(--border, #dbd6cb); color: #14244f; padding: 0 12px; overflow: hidden; white-space: nowrap;
+  font: 44px "Segoe Script", "Brush Script MT", "Lucida Handwriting", "Apple Chancery", "URW Chancery L", cursive;
+}
+.rs-legal { font-size: 12px; color: var(--muted, #6a665e); margin: 12px 0 0; line-height: 1.45; }
+.rs-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+.rs-link { align-self: flex-end; border: 0; background: none; color: var(--muted, #6a665e); text-decoration: underline; cursor: pointer; font: inherit; font-size: 13px; }
+.rs-primary, .rs-secondary { border-radius: 10px; padding: 9px 16px; font: inherit; font-weight: 600; cursor: pointer; }
+.rs-primary { border: 0; background: var(--accent, #d9481f); color: var(--accent-text, #fff); }
+.rs-primary:disabled { opacity: .4; cursor: not-allowed; }
+.rs-secondary { border: 1px solid var(--border, #dbd6cb); background: transparent; color: inherit; }

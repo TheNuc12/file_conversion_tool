@@ -26,7 +26,8 @@ a = Analysis(
     datas=datas,
     binaries=binaries,
     hiddenimports=hiddenimports,
-    excludes=["tkinter", "pytest", "_pytest", "playwright"],
+    # The signing server's libraries: the desktop app never imports them.
+    excludes=["tkinter", "pytest", "_pytest", "playwright", "flask", "werkzeug", "jinja2", "waitress", "pyhanko", "pyhanko_certvalidator"],
 )
 pyz = PYZ(a.pure)
 exe = EXE(

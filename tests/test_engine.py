@@ -139,3 +139,14 @@ def test_real_graph_has_no_nonsense_routes(engine):
     assert "mp3" not in engine.routes_from("png")  # no PNG -> GIF -> MP4 -> MP3
     assert "ico" not in engine.routes_from("mp4")  # video only reaches GIF/PNG/JPEG as images
     assert "mp4" in engine.routes_from("gif")
+
+
+def test_word_to_pdf_never_goes_through_plain_text():
+    # Without LibreOffice there is no faithful DOCX -> PDF, and DOCX -> TXT -> PDF would
+    # silently drop all formatting, so it must not be offered at all.
+    from rotary.converters import default_converters
+
+    engine = Engine([c for c in default_converters() if c.name != "office"])
+    assert "pdf" not in engine.routes_from("docx")
+    if "pdf" in engine.routes_from("txt"):
+        assert engine.route("txt", "pdf").formats == ["txt", "pdf"]

@@ -14,10 +14,12 @@ dependencies = [
     "openpyxl>=3.1",
     "pypdfium2>=4.20",
     "reportlab>=4.0",
+    "pypdf>=4.0",
 ]
 
 [project.optional-dependencies]
 heic = ["pillow-heif>=0.16"]
+server = ["flask>=3.0", "waitress>=3.0", "pyhanko>=0.25"]
 test = ["pytest>=8", "playwright>=1.40"]
 
 [project.scripts]
@@ -31,6 +33,7 @@ include = ["rotary*"]
 
 [tool.setuptools.package-data]
 "rotary.web" = ["static/*"]
+"rotary.sign" = ["static/*", "templates/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

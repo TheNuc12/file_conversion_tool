@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Rotary Converter</title>
+<link rel="stylesheet" href="/sign-static/rsign.css">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23333'/%3E%3Ccircle cx='16' cy='16' r='10' fill='%23666'/%3E%3Crect x='15' y='4' width='2' height='8' rx='1' fill='%23ff6a3d'/%3E%3C/svg%3E">
 <style>
 :root {
@@ -235,6 +236,40 @@ header p { margin: 0; color: var(--muted); font-size: 14px; }
 .hint { margin-top: 8px; font-size: 12px; color: var(--faint); text-align: center; }
 .hint kbd { font: 11px var(--mono); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 4px; padding: 0 4px; }
 
+/* ---------------------------------------------------------------- modes */
+.modes { margin-left: auto; display: inline-flex; padding: 3px; border: 1px solid var(--border); border-radius: 999px; background: var(--panel); }
+.modes button {
+  border: 0; background: none; padding: 6px 14px; border-radius: 999px; cursor: pointer; color: var(--muted); font-weight: 600; font-size: 14px;
+}
+.modes button[aria-selected="true"] { background: var(--text); color: var(--bg); }
+
+/* ---------------------------------------------------------------- sign */
+.sign-layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .sign-layout { grid-template-columns: minmax(0, 1fr); } }
+.sign-side { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 10px; }
+.sign-side h2 { margin: 6px 0 0; }
+.drop.compact { min-height: 92px; padding: 14px; }
+.sign-docname { margin: 0; font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.tools { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.tool {
+  border: 1px solid var(--border); background: var(--panel); border-radius: 9px; padding: 7px 8px; cursor: pointer;
+  font-size: 13px; font-weight: 600; color: var(--text); text-align: left;
+}
+.tool:disabled { opacity: .45; cursor: not-allowed; }
+.tool[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--panel)); }
+.sign-side label.field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.sign-side input[type="text"] { padding: 7px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel-2); }
+.mysig { display: flex; align-items: center; gap: 10px; min-height: 56px; padding: 6px 10px; border: 1px dashed var(--border); border-radius: 10px; background: #fff; }
+.mysig img { max-height: 44px; max-width: 150px; }
+.mysig span { color: #888; font-size: 13px; }
+.mysig .linkish { margin-left: auto; }
+.check { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.sign-doc { min-height: 60vh; border-radius: 16px; background: var(--panel-2); border: 1px solid var(--border); padding: 12px; }
+.sign-empty { display: flex; align-items: center; justify-content: center; min-height: 58vh; color: var(--faint); text-align: center; padding: 20px; }
+.sign-status { font-size: 13px; min-height: 18px; margin: 0; }
+.sign-status.bad { color: var(--bad); }
+.sign-status.ok { color: var(--ok); }
+
 footer { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--muted); justify-content: center; }
 footer .be { display: inline-flex; align-items: center; gap: 6px; }
 footer .be::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
@@ -263,11 +298,44 @@ footer .be.off::before { background: var(--faint); }
     </svg>
     <div>
       <h1>Rotary</h1>
-      <p>Drop in a file, turn the dial, get it back in the format you need.</p>
+      <p id="tagline">Drop in a file, turn the dial, get it back in the format you need.</p>
     </div>
+    <nav class="modes" role="tablist" aria-label="Mode">
+      <button type="button" role="tab" id="tab-convert" aria-selected="true" aria-controls="convert-view">Convert</button>
+      <button type="button" role="tab" id="tab-sign" aria-selected="false" aria-controls="sign-view">Sign a PDF</button>
+    </nav>
   </header>
 
-  <div class="deck">
+  <section id="sign-view" class="sign-layout" role="tabpanel" aria-labelledby="tab-sign" hidden>
+    <aside class="panel sign-side">
+      <h2>1 · Document</h2>
+      <label class="drop compact" id="sign-drop">
+        <input type="file" id="sign-picker" accept="application/pdf,.pdf">
+        <strong>Open a PDF</strong>
+        <span>or drop it here</span>
+      </label>
+      <p class="sign-docname" id="sign-docname"></p>
+      <h2>2 · Add fields</h2>
+      <div class="tools" id="sign-tools">
+        <button type="button" class="tool" data-kind="signature" disabled>Signature</button>
+        <button type="button" class="tool" data-kind="initials" disabled>Initials</button>
+        <button type="button" class="tool" data-kind="date" disabled>Date</button>
+        <button type="button" class="tool" data-kind="name" disabled>Name</button>
+        <button type="button" class="tool" data-kind="text" disabled>Text</button>
+        <button type="button" class="tool" data-kind="checkbox" disabled>Checkbox</button>
+      </div>
+      <p class="hint" style="text-align:left;margin:0">Pick a field, then click the page. Drag to move it, drag its corner to resize. Hold <kbd>Shift</kbd> to drop several.</p>
+      <h2>3 · You</h2>
+      <label class="field">Your name <input type="text" id="sign-name" autocomplete="name"></label>
+      <div class="mysig"><span id="sign-nosig">No signature yet</span><img id="sign-preview" alt="Your signature" hidden><button type="button" class="linkish" id="sign-change">Draw or type</button></div>
+      <label class="check"><input type="checkbox" id="sign-remember" checked> Remember my name and signature on this PC</label>
+      <button class="go" id="sign-save" type="button" disabled>Save signed PDF</button>
+      <p class="sign-status" id="sign-status" role="status"></p>
+    </aside>
+    <div class="sign-doc" id="sign-doc"><div class="sign-empty">Open a PDF to sign it. It never leaves this computer.</div></div>
+  </section>
+
+  <div class="deck" id="convert-view" role="tabpanel" aria-labelledby="tab-convert">
     <section class="panel" aria-labelledby="in-h">
       <h2 id="in-h">1 · Files</h2>
       <label class="drop" id="drop">
@@ -335,6 +403,7 @@ footer .be.off::before { background: var(--faint); }
   <footer id="backends"></footer>
 </div>
 
+<script src="/sign-static/rsign.js"></script>
 <script>
 "use strict";
 const $ = (id) => document.getElementById(id);
@@ -730,13 +799,19 @@ function triggerDownload(f) {
 // ------------------------------------------------------------------ input wiring
 const drop = $("drop"), picker = $("picker");
 picker.addEventListener("change", () => { addFiles([...picker.files]); picker.value = ""; });
-["dragenter", "dragover"].forEach((ev) => document.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("over"); }));
+const activeDrop = () => ($("sign-view").hidden ? drop : $("sign-drop"));
+["dragenter", "dragover"].forEach((ev) => document.addEventListener(ev, (e) => { e.preventDefault(); activeDrop().classList.add("over"); }));
 ["dragleave", "drop"].forEach((ev) => document.addEventListener(ev, (e) => {
   e.preventDefault();
   if (ev === "dragleave" && e.relatedTarget) return;
   drop.classList.remove("over");
+  $("sign-drop").classList.remove("over");
 }));
-document.addEventListener("drop", (e) => { if (e.dataTransfer?.files?.length) addFiles([...e.dataTransfer.files]); });
+document.addEventListener("drop", (e) => {
+  if (!e.dataTransfer?.files?.length) return;
+  if (!$("sign-view").hidden) openForSigning(e.dataTransfer.files[0]);
+  else addFiles([...e.dataTransfer.files]);
+});
 
 $("clear").addEventListener("click", () => {
   if (state.busy) return;
@@ -798,6 +873,150 @@ dial.addEventListener("keydown", (e) => {
   else if (e.key === "End") { e.preventDefault(); select(n - 1); }
   else if (e.key === "Enter") { e.preventDefault(); convertAll(); }
 });
+
+// ------------------------------------------------------------------ modes
+function showMode(mode) {
+  const sign = mode === "sign";
+  $("tab-convert").setAttribute("aria-selected", String(!sign));
+  $("tab-sign").setAttribute("aria-selected", String(sign));
+  $("convert-view").hidden = sign;
+  $("sign-view").hidden = !sign;
+  $("tagline").textContent = sign
+    ? "Sign a PDF yourself. Everything happens on this computer."
+    : "Drop in a file, turn the dial, get it back in the format you need.";
+}
+$("tab-convert").addEventListener("click", () => showMode("convert"));
+$("tab-sign").addEventListener("click", () => showMode("sign"));
+
+// ------------------------------------------------------------------ sign a PDF
+const PREFS_KEY = "rotary.sign";
+const sign = { doc: null, name: "", viewer: null, signature: null, initials: null };
+
+function loadPrefs() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(PREFS_KEY) || "null");
+    if (!saved) return;
+    $("sign-name").value = saved.name || "";
+    sign.signature = saved.signature || null;
+    sign.initials = saved.initials || null;
+  } catch {}
+}
+function savePrefs() {
+  try {
+    if ($("sign-remember").checked) {
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ name: $("sign-name").value, signature: sign.signature, initials: sign.initials }));
+    } else {
+      localStorage.removeItem(PREFS_KEY);
+    }
+  } catch {}
+}
+function showSignature() {
+  $("sign-preview").hidden = !sign.signature;
+  $("sign-nosig").hidden = !!sign.signature;
+  if (sign.signature) $("sign-preview").src = sign.signature;
+}
+function signStatus(text, kind = "") {
+  $("sign-status").textContent = text;
+  $("sign-status").className = "sign-status" + (kind ? " " + kind : "");
+}
+const initialsOf = (name) => name.split(/\s+/).filter(Boolean).map((w) => w[0].toUpperCase()).join("");
+
+async function adoptFor(kind, force = false) {
+  if (sign[kind] && !force) return sign[kind];
+  const name = $("sign-name").value.trim();
+  const image = await RSign.adopt({ kind, name: kind === "initials" ? initialsOf(name) : name });
+  if (image) {
+    sign[kind] = image;
+    savePrefs();
+    showSignature();
+  }
+  return image;
+}
+
+async function openForSigning(file) {
+  if (!file) return;
+  if (!/\.pdf$/i.test(file.name) && file.type !== "application/pdf") {
+    signStatus("That isn't a PDF. Convert it to PDF first on the Convert tab.", "bad");
+    return;
+  }
+  signStatus("Opening…");
+  try {
+    const res = await fetch("/api/sign/open?name=" + encodeURIComponent(file.name), { method: "POST", headers: { "X-Rotary": "1" }, body: file });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Couldn't open that PDF");
+    sign.doc = data;
+    const pages = data.pages.map((p, i) => ({ src: `/api/sign/page?doc=${data.doc}&n=${i}`, width: p.width, height: p.height }));
+    sign.viewer = new RSign.Viewer($("sign-doc"), {
+      pages,
+      mode: "self",
+      onSign: (field) => adoptFor(field.kind),
+      onChange: updateSignSave,
+      onPlaced: () => document.querySelectorAll(".tool").forEach((b) => b.setAttribute("aria-pressed", "false")),
+      defaultName: () => $("sign-name").value.trim(),
+    });
+    $("sign-docname").textContent = `${data.name} · ${data.pages.length} page${data.pages.length === 1 ? "" : "s"}`;
+    document.querySelectorAll(".tool").forEach((b) => { b.disabled = false; b.setAttribute("aria-pressed", "false"); });
+    signStatus("");
+    updateSignSave();
+  } catch (err) {
+    signStatus(err.message, "bad");
+  }
+}
+
+function updateSignSave() {
+  const fields = sign.viewer?.fields || [];
+  $("sign-save").disabled = !fields.length;
+}
+
+async function saveSigned() {
+  const fields = sign.viewer.fields;
+  const empty = fields.filter((f) => !f.value && f.kind !== "checkbox");
+  if (empty.length) {
+    signStatus(`${empty.length} field${empty.length === 1 ? " is" : "s are"} still empty. Fill or remove ${empty.length === 1 ? "it" : "them"} first.`, "bad");
+    empty[0]._el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    return;
+  }
+  $("sign-save").disabled = true;
+  signStatus("Signing…");
+  try {
+    const payload = { fields: fields.map(({ _el, ...f }) => f) };
+    const res = await fetch("/api/sign/apply?doc=" + sign.doc.doc, {
+      method: "POST", headers: { "X-Rotary": "1", "Content-Type": "application/json" }, body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error((await res.json()).error || "Signing failed");
+    const blob = await res.blob();
+    const name = decodeURIComponent(res.headers.get("X-Rotary-Filename") || "signed.pdf");
+    const a = el("a", { href: URL.createObjectURL(blob), download: name });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+    signStatus(`Saved ${name} to your Downloads.`, "ok");
+  } catch (err) {
+    signStatus(err.message, "bad");
+  } finally {
+    updateSignSave();
+  }
+}
+
+document.querySelectorAll(".tool").forEach((button) => button.addEventListener("click", () => {
+  if (!sign.viewer) return;
+  const on = button.getAttribute("aria-pressed") !== "true";
+  document.querySelectorAll(".tool").forEach((b) => b.setAttribute("aria-pressed", "false"));
+  button.setAttribute("aria-pressed", String(on));
+  sign.viewer.setTool(on ? button.dataset.kind : null);
+}));
+$("sign-picker").addEventListener("change", () => { openForSigning($("sign-picker").files[0]); $("sign-picker").value = ""; });
+$("sign-change").addEventListener("click", async () => {
+  const image = await adoptFor("signature", true);
+  if (image && sign.viewer) {
+    sign.viewer.fields.filter((f) => f.kind === "signature").forEach((f) => { f.value = image; });
+    sign.viewer.refresh();
+  }
+});
+$("sign-name").addEventListener("change", savePrefs);
+$("sign-remember").addEventListener("change", savePrefs);
+$("sign-save").addEventListener("click", saveSigned);
+loadPrefs();
+showSignature();
 
 // Heartbeat: the desktop app quits once no window has pinged it for a while.
 const TAB = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2));

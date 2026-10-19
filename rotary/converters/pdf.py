@@ -5,6 +5,7 @@ from __future__ import annotations
 from functools import cached_property
 from pathlib import Path
 
+from .._pdfium import LOCK
 from .base import ConversionError, Converter, Edge, Options
 from .images import save_image, writable_formats
 
@@ -34,8 +35,10 @@ class PdfConverter(Converter):
             # would dress that up as a faithful conversion.
             edges += self._pairs(["pdf"], ["txt"], terminal=True)
         if _have("reportlab"):
-            # Fallback only: LibreOffice lays out text (and non-Latin scripts) better.
-            edges += self._pairs(["txt"], ["pdf"], cost=4)
+            # Fallback only: LibreOffice lays out text (and non-Latin scripts) better. Only
+            # for real text files: after DOCX -> TXT it would pass off a formatting-free
+            # PDF as "Word to PDF".
+            edges += self._pairs(["txt"], ["pdf"], cost=4, initial=True)
         return edges
 
     def edges(self) -> list[Edge]:
@@ -58,28 +61,30 @@ class PdfConverter(Converter):
             raise ConversionError(f"Couldn't open {src.name} as a PDF: {exc}") from exc
 
     def _render(self, src: Path, dst: Path, dst_fmt: str, options: Options) -> None:
-        pdf = self._open(src)
-        try:
-            page_no = options.page or 1
-            if not 1 <= page_no <= len(pdf):
-                raise ConversionError(f"{src.name} has {len(pdf)} page(s); there is no page {page_no}")
-            scale = (options.dpi or 150) / 72
-            image = pdf[page_no - 1].render(scale=scale).to_pil()
-        finally:
-            pdf.close()
+        with LOCK:
+            pdf = self._open(src)
+            try:
+                page_no = options.page or 1
+                if not 1 <= page_no <= len(pdf):
+                    raise ConversionError(f"{src.name} has {len(pdf)} page(s); there is no page {page_no}")
+                scale = (options.dpi or 150) / 72
+                image = pdf[page_no - 1].render(scale=scale).to_pil()
+            finally:
+                pdf.close()
         save_image(image, dst, dst_fmt, options)
 
     def _pdf_to_text(self, src: Path, dst: Path) -> None:
-        pdf = self._open(src)
-        try:
-            pages = []
-            for page in pdf:
-                textpage = page.get_textpage()
-                pages.append(textpage.get_text_range().replace("\r\n", "\n").strip())
-                textpage.close()
-                page.close()
-        finally:
-            pdf.close()
+        with LOCK:
+            pdf = self._open(src)
+            try:
+                pages = []
+                for page in pdf:
+                    textpage = page.get_textpage()
+                    pages.append(textpage.get_text_range().replace("\r\n", "\n").strip())
+                    textpage.close()
+                    page.close()
+            finally:
+                pdf.close()
         dst.write_text("\n\n\f".join(pages) + "\n", encoding="utf-8")
 
     def _text_to_pdf(self, src: Path, dst: Path) -> None:
