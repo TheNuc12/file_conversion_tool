@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}First-time setup{% endblock %}
+{% block main_class %}narrow{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Set up Rotary Sign</h1>
+  <p class="muted">Create the first administrator account. You'll find the setup code in the server's console output.</p>
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" class="stack">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <label>Setup code <input name="code" required autocomplete="off" spellcheck="false"></label>
+    <label>Your name <input name="name" required autocomplete="name" value="{{ request.form.name or '' }}"></label>
+    <label>Email <input type="email" name="email" required autocomplete="username" value="{{ request.form.email or '' }}"></label>
+    <label>Password <input type="password" name="password" required minlength="10" autocomplete="new-password"><small class="muted">At least 10 characters.</small></label>
+    <button class="btn" type="submit">Create administrator</button>
+  </form>
+</section>
+{% endblock %}

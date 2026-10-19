@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Sign · {{ env.title }}{% endblock %}
+{% block main_class %}wide{% endblock %}
+{% block content %}
+<div class="signbar card">
+  <div>
+    <strong>{{ env.title }}</strong>
+    <div class="muted small">From {{ owner.name }} · signing as {{ recipient.name }} ({{ recipient.email }})</div>
+  </div>
+  <div class="signbar-actions">
+    <span class="muted small" id="progress" aria-live="polite"></span>
+    <button type="button" class="btn ghost small" id="next">Next field</button>
+    <button type="button" class="btn" id="finish">Finish signing</button>
+  </div>
+</div>
+<p class="status center" id="status" role="status"></p>
+<section class="doc" id="doc" aria-label="Document"></section>
+<div class="center">
+  <details class="void inline-block">
+    <summary>Decline to sign</summary>
+    <form method="post" action="{{ url_for('sign.signer_decline', token=token) }}" class="stack">
+      <label>Reason (shared with {{ owner.name }}) <textarea name="reason" rows="2" maxlength="500"></textarea></label>
+      <button class="btn danger" type="submit" data-confirm="Decline to sign this document?">Decline</button>
+    </form>
+  </details>
+</div>
+<script type="application/json" id="page-data">{{ payload|tojson }}</script>
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='rsign.js') }}"></script>
+<script src="{{ url_for('static', filename='signing.js') }}"></script>
+{% endblock %}

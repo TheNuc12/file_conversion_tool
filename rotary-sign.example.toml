@@ -1,0 +1,36 @@
+# Rotary Sign settings. Copy to <data folder>/rotary-sign.toml and edit.
+# Any setting can instead come from an environment variable: ROTARY_SIGN_<NAME IN CAPITALS>.
+
+# How people reach the server. Used in the links emailed to signers, so it must work
+# from wherever signers are (outside the company too, if you send to customers).
+url = "https://sign.example.com"
+organisation = "Example Ltd"
+
+# Behind a reverse proxy (IIS, nginx, Caddy...) that sets X-Forwarded-For/Proto?
+trust_proxy = true
+
+# ---------------------------------------------------------------- email
+# Leave smtp_host empty to save emails to <data>/outbox instead (handy for a trial:
+# senders can copy each signing link from the envelope page).
+#
+# Microsoft 365:  smtp.office365.com, port 587, starttls, a licensed mailbox's login
+# Google:         smtp.gmail.com, port 587, starttls, an app password
+# Internal relay: often port 25, security "none", no login
+smtp_host = ""
+smtp_port = 587
+smtp_security = "starttls"   # starttls | ssl | none
+smtp_user = ""
+smtp_password = ""
+mail_from = ""               # defaults to smtp_user
+
+# ---------------------------------------------------------------- sealing
+# Finished documents are digitally sealed so any later change is detectable. Without a
+# certificate here, a self-signed one is created on first use (see docs/signing-server.md
+# for how to make PDF readers trust it, or use one from a public certificate authority).
+seal_p12 = ""                # path to a .pfx/.p12 document-signing certificate
+seal_password = ""
+timestamp_url = ""           # e.g. "http://timestamp.digicert.com" for trusted signing times
+
+# ---------------------------------------------------------------- limits
+link_days = 30               # signing links expire after this many days
+max_upload_mb = 25

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{{ env.title }}{% endblock %}
+{% block main_class %}narrow{% endblock %}
+{% block content %}
+<section class="card center">
+  {% if recipient.status == 'declined' %}
+    <h1>You declined to sign</h1>
+    <p class="muted">We've let the sender know. You can close this page.</p>
+  {% elif env.status == 'completed' %}
+    <h1>All done</h1>
+    <p>Everyone has signed <strong>{{ env.title }}</strong>. A copy has been emailed to you.</p>
+    <a class="btn" href="{{ url_for('sign.signer_download', token=token) }}">Download the signed PDF</a>
+  {% else %}
+    <h1>Thanks, {{ recipient.name }}</h1>
+    <p>You've signed <strong>{{ env.title }}</strong>. We'll email you the finished document once everyone has signed.</p>
+  {% endif %}
+</section>
+{% endblock %}

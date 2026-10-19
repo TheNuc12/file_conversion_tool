@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}Prepare · {{ env.title }}{% endblock %}
+{% block main_class %}wide{% endblock %}
+{% block content %}
+<div class="layout">
+  <aside class="card side">
+    <h2>1 · Details</h2>
+    <label>Title <input id="title" maxlength="200"></label>
+    <label>Message to signers <textarea id="message" rows="3" maxlength="2000" placeholder="Optional"></textarea></label>
+
+    <h2>2 · Signers</h2>
+    <ol class="signers" id="signers"></ol>
+    <div class="add-signer">
+      <input id="new-name" placeholder="Name" aria-label="Signer name" autocomplete="off">
+      <input id="new-email" type="email" placeholder="Email" aria-label="Signer email" autocomplete="off">
+      <button type="button" class="btn small ghost" id="add-signer">Add signer</button>
+    </div>
+    <button type="button" class="linkish" id="add-me">Add me as a signer</button>
+    <label class="check"><input type="checkbox" id="sequential" checked> Sign in this order (each signer is emailed when the previous one has signed)</label>
+
+    <h2>3 · Fields</h2>
+    <label>Fields for <select id="field-signer"></select></label>
+    <div class="tools" id="tools">
+      <button type="button" class="tool" data-kind="signature">Signature</button>
+      <button type="button" class="tool" data-kind="initials">Initials</button>
+      <button type="button" class="tool" data-kind="date">Date signed</button>
+      <button type="button" class="tool" data-kind="name">Name</button>
+      <button type="button" class="tool" data-kind="text">Text</button>
+      <button type="button" class="tool" data-kind="checkbox">Checkbox</button>
+    </div>
+    <p class="muted small">Pick a field, then click the page. Drag to move, drag the corner to resize. Name and date fill themselves in when the signer signs.</p>
+
+    <p class="status" id="status" role="status"></p>
+    <button type="button" class="btn wide-btn" id="send">Send for signature</button>
+    <div class="row-between">
+      <button type="button" class="linkish" id="save">Save draft</button>
+      <form method="post" action="{{ url_for('sign.delete', envelope_id=env.id) }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+        <button class="linkish danger" type="submit" data-confirm="Delete this draft?">Delete draft</button>
+      </form>
+    </div>
+    <div class="links" id="links" hidden>
+      <h2>Signing links</h2>
+      <p class="muted small">Email isn't set up on this server, so send these links yourself. Each one is personal to that signer.</p>
+      <div id="link-list"></div>
+      <a class="btn small" id="links-done" href="#">Done</a>
+    </div>
+  </aside>
+  <section class="doc" id="doc" aria-label="Document"></section>
+</div>
+<script type="application/json" id="page-data">{{ payload|tojson }}</script>
+<input type="hidden" id="csrf" value="{{ csrf_token() }}">
+{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='rsign.js') }}"></script>
+<script src="{{ url_for('static', filename='prepare.js') }}"></script>
+{% endblock %}

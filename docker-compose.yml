@@ -1,0 +1,23 @@
+# Rotary Sign behind your company's HTTPS reverse proxy. Start with: docker compose up -d
+# Then read the setup code with: docker compose logs rotary-sign
+services:
+  rotary-sign:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"   # only the reverse proxy on this machine talks to it
+    volumes:
+      - rotary-sign-data:/data  # database, documents, seal certificate: back this up
+    environment:
+      ROTARY_SIGN_URL: https://sign.example.com
+      ROTARY_SIGN_ORGANISATION: Example Ltd
+      ROTARY_SIGN_TRUST_PROXY: "true"
+      # Email (Microsoft 365 shown; see rotary-sign.example.toml for others)
+      # ROTARY_SIGN_SMTP_HOST: smtp.office365.com
+      # ROTARY_SIGN_SMTP_PORT: "587"
+      # ROTARY_SIGN_SMTP_USER: signing@example.com
+      # ROTARY_SIGN_SMTP_PASSWORD: change-me
+      # ROTARY_SIGN_MAIL_FROM: signing@example.com
+
+volumes:
+  rotary-sign-data:

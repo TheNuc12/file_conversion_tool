@@ -68,6 +68,18 @@ def _samples(folder: Path) -> dict[str, Path]:
     return {"png": png, "json": data, "zip": archive, "markdown": markdown, "wav": audio}
 
 
+def _text_pdf() -> bytes:
+    import io
+
+    from reportlab.pdfgen import canvas
+
+    buf = io.BytesIO()
+    c = canvas.Canvas(buf)
+    c.drawString(72, 760, "Rotary self-test")
+    c.save()
+    return buf.getvalue()
+
+
 def run(report: Path) -> int:
     engine = Engine()
     lines = [f"Rotary {__version__}", f"Python {sys.version.split()[0]} on {platform.platform()}", ""]
@@ -92,6 +104,18 @@ def run(report: Path) -> int:
                 except Exception as exc:
                     failures += 1
                     lines.append(f"FAIL {label}: {exc}")
+
+        # The desktop Sign tab: place a field on a PDF and stamp it.
+        try:
+            from .sign import pdf as sign_pdf
+
+            doc = sign_pdf.prepare(_text_pdf())
+            stamped = sign_pdf.stamp(doc, [sign_pdf.Field("text", 0, 0.1, 0.1, 0.5, 0.05, "Signed by selftest")])
+            sign_pdf.render_page(stamped, 0, 300)
+            lines.append("ok   sign a PDF")
+        except Exception as exc:
+            failures += 1
+            lines.append(f"FAIL sign a PDF: {exc}")
 
     lines += ["", "all good" if not failures else f"{failures} check(s) failed"]
     report.write_text("\n".join(lines) + "\n", encoding="utf-8")

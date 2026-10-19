@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Users{% endblock %}
+{% block content %}
+<div class="page-head"><h1>Users</h1></div>
+<section class="card">
+  <h2>Add someone who sends documents</h2>
+  <p class="muted small">People who only sign don't need an account; they get a link by email.</p>
+  {% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" class="row-form">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <label>Name <input name="name" required></label>
+    <label>Email <input type="email" name="email" required></label>
+    <label class="check"><input type="checkbox" name="is_admin" value="1"> Administrator</label>
+    <button class="btn" type="submit">Add user</button>
+  </form>
+</section>
+<section class="card">
+  <table class="table">
+    <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
+    <tbody>
+    {% for u in users %}
+      <tr class="{{ '' if u.active else 'dim' }}">
+        <td>{{ u.name }}</td>
+        <td>{{ u.email }}</td>
+        <td>{{ 'Administrator' if u.is_admin else 'Sender' }}</td>
+        <td>{{ 'Active' if u.active else 'Deactivated' }}</td>
+        <td class="actions">
+          <form method="post" action="{{ url_for('sign.user_action', user_id=u.id) }}">
+            <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+            {% if u.active %}
+              <button class="linkish" name="action" value="reset" data-confirm="Reset {{ u.email }}'s password?">Reset password</button>
+              {% if u.is_admin %}<button class="linkish" name="action" value="demote">Make sender</button>{% else %}<button class="linkish" name="action" value="promote">Make admin</button>{% endif %}
+              <button class="linkish danger" name="action" value="deactivate" data-confirm="Stop {{ u.email }} signing in?">Deactivate</button>
+            {% else %}
+              <button class="linkish" name="action" value="activate">Reactivate</button>
+            {% endif %}
+          </form>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

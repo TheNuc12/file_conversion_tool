@@ -142,7 +142,8 @@ def render_page(data: bytes, index: int, width: int = 1100) -> bytes:
 # --------------------------------------------------------------------------- stamping
 
 
-def _signature_image(value: str):
+def signature_image(value: str):
+    """Decode and check a data:image/png signature, raising SignError if it isn't acceptable."""
     from PIL import Image
     from reportlab.lib.utils import ImageReader
 
@@ -175,7 +176,7 @@ def _draw(c, field: Field, width: float, height: float) -> None:
     x, w, h = field.x * width, field.w * width, field.h * height
     y = height - (field.y + field.h) * height  # PDF measures from the bottom
     if field.kind in ("signature", "initials"):
-        image = _signature_image(field.value)
+        image = signature_image(field.value)
         iw, ih = image.getSize()
         scale = min(w / iw, h / ih)
         dw, dh = iw * scale, ih * scale

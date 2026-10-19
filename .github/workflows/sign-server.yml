@@ -1,0 +1,42 @@
+name: Sign server
+
+# Runs the whole test suite on Linux, then builds the Rotary Sign Docker image and
+# checks that a container from it starts and serves the first-time setup page.
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test-and-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg pandoc > /dev/null
+          python -m pip install --upgrade pip
+          python -m pip install ".[heic,test,server]"
+
+      - name: Test
+        run: python -m pytest -q -m "not slow"
+
+      - name: Build the Docker image
+        run: docker build -t rotary-sign:ci .
+
+      - name: Start a container and check it serves
+        run: |
+          docker run -d --name sign -p 8080:8080 -e ROTARY_SIGN_URL=http://localhost:8080 rotary-sign:ci
+          for i in $(seq 1 30); do curl -fsS http://localhost:8080/setup > /dev/null && break; sleep 1; done
+          curl -fsS http://localhost:8080/setup | grep -q "Set up Rotary Sign"
+          docker logs sign | grep -q "enter the code"
+          curl -fsS -o /dev/null -w "%{http_code}\n" http://localhost:8080/verify
+          docker exec sign rotary-sign check
+          docker rm -f sign

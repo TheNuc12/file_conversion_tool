@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}{{ env.title }}{% endblock %}
+{% block content %}
+{% set label, tone = status_label(env.status) %}
+<div class="page-head">
+  <div>
+    <h1>{{ env.title }}</h1>
+    <p class="muted">{{ env.filename }} · <span class="badge {{ tone }}">{{ label }}</span></p>
+  </div>
+  <div class="head-actions">
+    {% if env.status == 'completed' %}
+      <a class="btn" href="{{ url_for('sign.download', envelope_id=env.id, which='signed') }}">Download signed PDF</a>
+    {% endif %}
+    <a class="btn ghost" href="{{ url_for('sign.download', envelope_id=env.id, which='original') }}">Original</a>
+  </div>
+</div>
+
+{% if needs_completion %}
+<div class="flash bad">Everyone has signed, but finishing the document failed (see the history below).
+  <form method="post" action="{{ url_for('sign.retry_completion', envelope_id=env.id) }}" class="inline"><input type="hidden" name="csrf" value="{{ csrf_token() }}"><button class="btn small" type="submit">Try again</button></form>
+</div>
+{% endif %}
+
+<section class="card">
+  <h2>Signers{% if env.sequential %} <span class="muted small">(in order)</span>{% endif %}</h2>
+  <table class="table">
+    <thead><tr><th>#</th><th>Name</th><th>Email</th><th>Status</th><th>When (UTC)</th><th><span class="visually-hidden">Actions</span></th></tr></thead>
+    <tbody>
+    {% for r in recipients %}
+      {% set rlabel, rtone = status_label(r.status) %}
+      <tr>
+        <td>{{ r.position + 1 }}</td>
+        <td>{{ r.name }}</td>
+        <td>{{ r.email }}</td>
+        <td><span class="badge {{ rtone }}">{{ rlabel if r.status != 'sent' else 'Emailed' }}</span>{% if r.decline_reason %}<div class="small muted">“{{ r.decline_reason }}”</div>{% endif %}</td>
+        <td class="muted">{{ (r.signed_at or r.declined_at or r.viewed_at or '')[:16] }}</td>
+        <td class="actions">
+          {% if env.status == 'sent' and r.status in ('sent', 'viewed') %}
+          <form method="post" action="{{ url_for('sign.recipient_action', envelope_id=env.id, recipient_id=r.id, action='remind') }}" class="inline">
+            <input type="hidden" name="csrf" value="{{ csrf_token() }}"><button class="linkish" type="submit">{{ 'Resend email' if email_configured else 'Email again' }}</button>
+          </form>
+          <form method="post" action="{{ url_for('sign.recipient_action', envelope_id=env.id, recipient_id=r.id, action='link') }}" class="inline">
+            <input type="hidden" name="csrf" value="{{ csrf_token() }}"><button class="linkish" type="submit" data-confirm="This replaces their current link. Continue?">Get a new link</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% if env.status == 'sent' %}
+  <details class="void">
+    <summary>Cancel this request</summary>
+    <form method="post" action="{{ url_for('sign.void', envelope_id=env.id) }}" class="row-form">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <label>Reason (sent to signers) <input name="reason" maxlength="500"></label>
+      <button class="btn danger" type="submit" data-confirm="Void this envelope? Its signing links will stop working.">Void envelope</button>
+    </form>
+  </details>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>History</h2>
+  <p class="small {{ 'muted' if chain_ok else 'error' }}">{{ 'Audit trail intact: every entry is chained to the one before it.' if chain_ok else 'Warning: this audit trail has been altered since it was written.' }}</p>
+  <table class="table compact">
+    <thead><tr><th>When (UTC)</th><th>Who</th><th>What</th><th>IP address</th></tr></thead>
+    <tbody>
+    {% for e in events %}
+      <tr><td class="muted nowrap">{{ e.at }}</td><td>{{ e.actor }}</td><td>{{ e.action }}</td><td class="muted">{{ e.ip or '' }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% if env.final_sha256 %}<p class="small muted">Signed PDF SHA-256: <code>{{ env.final_sha256 }}</code></p>{% endif %}
+</section>
+{% endblock %}

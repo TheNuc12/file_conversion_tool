@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Check a document{% endblock %}
+{% block main_class %}narrow{% endblock %}
+{% block content %}
+<section class="card">
+  <h1>Check a signed document</h1>
+  <p class="muted">Upload a PDF signed here to confirm it hasn't been changed since everyone signed.</p>
+  <form method="post" enctype="multipart/form-data" class="stack">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <input type="file" name="document" accept="application/pdf,.pdf" required aria-label="PDF to check">
+    <button class="btn" type="submit">Check</button>
+  </form>
+</section>
+{% if result %}
+<section class="card">
+  {% if result.error %}
+    <p class="error">{{ result.error }}</p>
+  {% else %}
+    {% set seal = result.seals[0] if result.seals else None %}
+    {% if result.match and seal and seal.intact %}
+      <h2 class="ok-text">Authentic and unchanged</h2>
+      <p>This is the exact file produced when <strong>{{ result.match.title }}</strong> was completed on {{ result.match.completed_at }} UTC.</p>
+      <ul>{% for s in result.signers %}<li>{{ s.name }} ({{ s.email }}), signed {{ s.signed_at }} UTC</li>{% endfor %}</ul>
+    {% elif seal and seal.intact %}
+      <h2>Seal intact, but not one of ours</h2>
+      <p class="muted">The digital seal is valid ({{ seal.signer }}), but this exact file wasn't produced by this server.</p>
+    {% elif seal %}
+      <h2 class="error">This document has been changed</h2>
+      <p>It carries a seal, but the content no longer matches it: it was modified after signing.</p>
+    {% else %}
+      <h2 class="error">No digital seal found</h2>
+      <p class="muted">This PDF wasn't sealed by Rotary Sign, or the seal was removed (for example by printing to PDF).</p>
+    {% endif %}
+  {% endif %}
+</section>
+{% endif %}
+<p class="center small"><a href="{{ url_for('sign.seal_certificate') }}">Download this server's sealing certificate</a></p>
+{% endblock %}

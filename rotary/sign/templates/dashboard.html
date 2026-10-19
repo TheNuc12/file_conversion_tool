@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Envelopes{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>Envelopes</h1>
+  <a class="btn" href="{{ url_for('sign.new_envelope') }}">Send a document</a>
+</div>
+{% if envelopes %}
+<section class="card flush">
+  <table class="table">
+    <thead><tr><th>Document</th><th>Status</th><th>Signed</th>{% if user.is_admin %}<th>Sender</th>{% endif %}<th>Created (UTC)</th></tr></thead>
+    <tbody>
+    {% for e in envelopes %}
+      {% set label, tone = status_label(e.status) %}
+      <tr>
+        <td><a href="{{ url_for('sign.prepare' if e.status == 'draft' else 'sign.envelope', envelope_id=e.id) }}">{{ e.title }}</a></td>
+        <td><span class="badge {{ tone }}">{{ label }}</span></td>
+        <td>{{ e.signed_count }} of {{ e.recipient_count }}</td>
+        {% if user.is_admin %}<td>{{ e.owner_name }}</td>{% endif %}
+        <td class="muted">{{ e.created_at[:16] }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% else %}
+<section class="card empty">
+  <h2>Nothing sent yet</h2>
+  <p class="muted">Upload a PDF, choose who signs and where, and Rotary Sign emails them a link.</p>
+  <a class="btn" href="{{ url_for('sign.new_envelope') }}">Send your first document</a>
+</section>
+{% endif %}
+{% endblock %}

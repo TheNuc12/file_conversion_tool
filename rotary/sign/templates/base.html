@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>{% block title %}Rotary Sign{% endblock %} · {{ org }}</title>
+<link rel="icon" href="{{ url_for('static', filename='icon.svg') }}" type="image/svg+xml">
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='rsign.css') }}">
+{% block head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+<header class="top">
+  <a class="brand" href="{{ url_for('sign.dashboard') if user else '#' }}">
+    <img src="{{ url_for('static', filename='icon.svg') }}" alt="" width="28" height="28">
+    <span><strong>{{ org }}</strong><small>Document signing</small></span>
+  </a>
+  {% if user %}
+  <nav aria-label="Main">
+    <a href="{{ url_for('sign.dashboard') }}">Envelopes</a>
+    <a href="{{ url_for('sign.new_envelope') }}" class="btn small">New envelope</a>
+    {% if user.is_admin %}<a href="{{ url_for('sign.users') }}">Users</a>{% endif %}
+    <a href="{{ url_for('sign.account') }}" title="{{ user.email }}">Account</a>
+    <form method="post" action="{{ url_for('sign.logout') }}"><input type="hidden" name="csrf" value="{{ csrf_token() }}"><button class="linkish" type="submit">Sign out</button></form>
+  </nav>
+  {% endif %}
+</header>
+<main class="{% block main_class %}wrap{% endblock %}">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="flash {{ category }}" role="status">
+        {% if category == 'link' %}
+          {% set parts = message.split(': ', 1) %}
+          {{ parts[0] }}: <input class="copy-field" readonly value="{{ parts[1] }}" aria-label="Signing link"> <button type="button" class="btn small ghost" data-copy>Copy</button>
+        {% else %}{{ message }}{% endif %}
+      </div>
+    {% endfor %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

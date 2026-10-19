@@ -180,12 +180,15 @@
       const mode = this.opts.mode;
       const interactive = mode === "self" || (mode === "fill" && field.mine);
       node.classList.toggle("rs-filled", !!field.value);
-      node.classList.toggle("rs-missing", mode === "fill" && field.mine && field.required && !field.value && field.kind !== "date" && field.kind !== "name");
+      node.classList.toggle("rs-missing", this._missing(field));
       node.classList.toggle("rs-readonly", !interactive && mode !== "design");
 
       if (mode === "design") {
         const who = this.opts.signers[field.signer || 0]?.name || `Signer ${(field.signer || 0) + 1}`;
-        content.append(el("span", { class: "rs-tag" }, `${KINDS[field.kind].label}${this.opts.signers.length > 1 ? ` · ${who}` : ""}`));
+        const label = `${KINDS[field.kind].label}${this.opts.signers.length > 1 ? ` · ${who}` : ""}`;
+        node.title = label;
+        // A checkbox is too small for words; a tick in the signer's colour says enough.
+        content.append(el("span", { class: "rs-tag" }, field.kind === "checkbox" ? "✓" : label));
       } else if (field.kind === "signature" || field.kind === "initials") {
         if (field.value) content.append(el("img", { src: field.value, alt: KINDS[field.kind].label, draggable: "false" }));
         else content.append(el("span", { class: "rs-tag" }, interactive ? `Click to ${field.kind === "initials" ? "initial" : "sign"}` : KINDS[field.kind].label));
@@ -193,7 +196,12 @@
         content.append(el("span", { class: "rs-tick" }, field.value === "true" ? "✓" : ""));
       } else if (interactive && (mode === "self" || field.kind === "text")) {
         const input = el("input", { type: "text", value: field.value || "", placeholder: KINDS[field.kind].label, "aria-label": KINDS[field.kind].label });
-        input.addEventListener("input", () => { field.value = input.value; node.classList.toggle("rs-filled", !!input.value); this._changed(); });
+        input.addEventListener("input", () => {
+          field.value = input.value;
+          node.classList.toggle("rs-filled", !!input.value);
+          node.classList.toggle("rs-missing", this._missing(field));
+          this._changed();
+        });
         input.addEventListener("pointerdown", (e) => e.stopPropagation());
         content.append(input);
       } else {
@@ -206,6 +214,13 @@
       if (interactive && mode === "fill") content.addEventListener("click", () => this._activate(field));
       node.setAttribute("aria-label", `${KINDS[field.kind].label} field${field.value ? ", filled" : ""}`);
       node.prepend(content);
+    }
+
+    /** A required field the signer still has to fill (fill mode only). */
+    _missing(field) {
+      if (this.opts.mode !== "fill" || !field.mine || !field.required) return false;
+      if (field.kind === "date" || field.kind === "name") return false;
+      return field.kind === "checkbox" ? field.value !== "true" : !field.value;
     }
 
     _activate(field) {

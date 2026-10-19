@@ -17,7 +17,7 @@ When there's no direct converter between two formats, Rotary chains converters t
 
 ## The desktop app (Windows)
 
-1. Download **Rotary-Setup-0.2.0.exe** (see [where to download](#where-to-download) below).
+1. Download **Rotary-Setup-0.3.0.exe** (see [where to download](#where-to-download) below).
 2. Double-click it and press **Install**. It installs just for you, so you don't need an administrator password.
 3. Click the **Rotary** icon on your desktop.
 
@@ -40,6 +40,30 @@ FFmpeg and Pandoc are built in, so images, audio, video, PDFs, data files, archi
 * If something goes wrong, there's a log at `%LOCALAPPDATA%\Rotary\rotary.log`.
 
 To build the app yourself on Windows, run `packaging\windows\build.ps1`. GitHub Actions also builds and tests it on every push (`.github/workflows/windows-app.yml`).
+
+## Electronic signatures (Rotary Sign)
+
+**Sign a PDF yourself.** Switch the desktop app to **Sign a PDF** and open your PDF.
+
+1. Pick a field (Signature, Initials, Date, Name, Text or Checkbox) and click where it goes on the page.
+2. Draw or type your signature once. If you like, Rotary remembers it on that PC.
+3. Press **Save signed PDF**. The signed copy goes to your Downloads folder.
+
+Nothing leaves the computer.
+
+**Send documents to other people to sign.** This is the Rotary Sign server, which your company runs, either as a Docker container or as plain Python on a server.
+
+* **Senders** (your staff) log in, upload a PDF, add signers, drag fields onto the pages and send.
+* **Signers** get an email link. They agree to sign electronically and sign in their browser, with no account needed. Signers can go in order or all at once.
+* **When everyone has signed**, the server stamps the document, adds a certificate of completion with the full audit trail, and seals it with a digital signature so any later change is detectable. Then it emails the finished PDF to everyone.
+* **A public "Check a document" page** confirms that a file is authentic and unchanged.
+
+```bash
+pip install ".[server]"
+rotary-sign run            # then open http://127.0.0.1:8080 and enter the setup code it prints
+```
+
+[docs/signing-server.md](docs/signing-server.md) covers setting it up for real (HTTPS, email, the seal certificate, backups), plus what it does and doesn't cover legally.
 
 ## Install from source
 
@@ -135,6 +159,10 @@ rotary/
   selftest.py         the --selftest check
   web/server.py       standard-library HTTP server for the UI
   web/static/         the single-page rotary-dial interface (no external assets)
+  sign/pdf.py         signing core: stamping fields, certificate of completion, digital seal
+  sign/server.py      the Rotary Sign server (Flask): envelopes, signing links, completion
+  sign/store.py       its SQLite storage and hash-chained audit trail
+  sign/static/        page viewer, field editor and signature pad, shared by the app and server
 packaging/
   make_icon.py        draws rotary.ico / rotary.png
   windows/            PyInstaller recipe, Inno Setup installer, build and download scripts
@@ -171,7 +199,7 @@ engine.convert("logo.svg", "png")
 ## Tests
 
 ```bash
-pip install -e ".[test]"
+pip install -e ".[test,server]"
 pytest                 # tests needing FFmpeg / Pandoc / LibreOffice skip if those aren't installed
 pytest -m "not slow"   # skip the LibreOffice and browser tests
 ```

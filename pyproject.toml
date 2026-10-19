@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rotary-convert"
-version = "0.2.0"
-description = "Convert files between image, audio, video, document, spreadsheet, data and archive formats, from the command line or a rotary-dial web UI."
+version = "0.3.0"
+description = "Convert files between formats from a rotary-dial desktop app or the command line, and sign PDFs, locally or through a self-hosted signing server."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -24,6 +24,8 @@ test = ["pytest>=8", "playwright>=1.40"]
 
 [project.scripts]
 rotary = "rotary.cli:main"
+
+rotary-sign = "rotary.sign.cli:main"
 
 [project.gui-scripts]
 rotary-app = "rotary.app:main"

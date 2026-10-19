@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}{{ env.title }}{% endblock %}
+{% block main_class %}narrow{% endblock %}
+{% block content %}
+<section class="card">
+  <p class="muted small">{{ owner.name }} ({{ owner.email }}) asks you to sign</p>
+  <h1>{{ env.title }}</h1>
+  {% if env.message %}<blockquote class="note">{{ env.message }}</blockquote>{% endif %}
+  <p>Hi {{ recipient.name }}. Before you review the document, please agree to do this electronically.</p>
+  <div class="disclosure" tabindex="0" aria-label="Electronic records and signatures disclosure">
+    <h2>Electronic records and signatures</h2>
+    <p>By agreeing, you consent to receive this document and related notices electronically and to sign it electronically. Your electronic signature is as legally binding as one made with pen and paper.</p>
+    <ul>
+      <li><strong>This request only.</strong> Your agreement covers this document and the emails about it.</li>
+      <li><strong>Paper copies.</strong> You can ask {{ owner.name }} at {{ owner.email }} for a paper copy at any time, free of charge.</li>
+      <li><strong>Changing your mind.</strong> You can withdraw consent before signing by choosing <em>Decline to sign</em>, or by contacting {{ owner.email }}. Withdrawing doesn't affect anything you already signed.</li>
+      <li><strong>What you need.</strong> An up-to-date web browser, an email address, and a way to open PDF files to keep your copy.</li>
+      <li><strong>Your contact details.</strong> If your email address changes, tell {{ owner.email }}.</li>
+    </ul>
+  </div>
+  <form method="post" action="{{ url_for('sign.signer_consent', token=token) }}" class="stack">
+    <label class="check"><input type="checkbox" name="agree" value="yes" required> I agree to use electronic records and signatures.</label>
+    <button class="btn" type="submit">Continue to the document</button>
+  </form>
+  <details class="void">
+    <summary>Decline to sign</summary>
+    <form method="post" action="{{ url_for('sign.signer_decline', token=token) }}" class="stack">
+      <label>Reason (shared with {{ owner.name }}) <textarea name="reason" rows="2" maxlength="500"></textarea></label>
+      <button class="btn danger" type="submit" data-confirm="Decline to sign this document?">Decline</button>
+    </form>
+  </details>
+</section>
+{% endblock %}
