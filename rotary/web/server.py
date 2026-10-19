@@ -13,6 +13,9 @@ import shutil
 import sys
 import tempfile
 import threading
+import time
+import traceback
+import urllib.request
 import webbrowser
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -75,12 +78,26 @@ class Handler(BaseHTTPRequestHandler):
     def _error(self, message: str, status: int = 400) -> None:
         self._json({"error": message}, status)
 
+    def handle_one_request(self):
+        # Count requests in flight so an idle shutdown never cuts off a conversion.
+        with self.server.state_lock:
+            self.server.active += 1
+            self.server.last_activity = time.monotonic()
+        try:
+            super().handle_one_request()
+        finally:
+            with self.server.state_lock:
+                self.server.active -= 1
+                self.server.last_activity = time.monotonic()
+
     # ------------------------------------------------------------------ routes
 
     def do_GET(self):
         if not self._host_ok():
             return self._error("Unexpected host", HTTPStatus.FORBIDDEN)
         url = urlparse(self.path)
+        if url.path == "/api/ping":
+            return self._ping(parse_qs(url.query))
         if url.path in ("/", "/index.html"):
             return self._static("index.html", "text/html; charset=utf-8")
         if url.path == "/api/formats":
@@ -92,14 +109,33 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         if not self._host_ok():
             return self._error("Unexpected host", HTTPStatus.FORBIDDEN)
+        url = urlparse(self.path)
+        if url.path == "/api/bye":
+            # Sent by navigator.sendBeacon, which can't add headers. It can only forget a
+            # tab id the caller already knows, so it needs no further protection.
+            return self._bye(parse_qs(url.query))
         # Browsers won't send a custom header cross-origin without a CORS preflight
         # (which we never approve), so other websites can't drive this endpoint.
         if self.headers.get("X-Rotary") != "1":
             return self._error("Missing X-Rotary header", HTTPStatus.FORBIDDEN)
-        url = urlparse(self.path)
         if url.path == "/api/convert":
             return self._convert(parse_qs(url.query))
         return self._error("Not found", HTTPStatus.NOT_FOUND)
+
+    def _ping(self, query: dict) -> None:
+        tab = query.get("tab", [""])[0][:64]
+        if tab:
+            with self.server.state_lock:
+                self.server.tabs[tab] = time.monotonic()
+                self.server.ever_connected = True
+        self._json({"ok": True, "version": __version__})
+
+    def _bye(self, query: dict) -> None:
+        tab = query.get("tab", [""])[0][:64]
+        with self.server.state_lock:
+            self.server.tabs.pop(tab, None)
+        self.send_response(HTTPStatus.NO_CONTENT)
+        self.end_headers()
 
     def _static(self, name: str, content_type: str) -> None:
         body = resources.files("rotary.web").joinpath("static", name).read_bytes()
@@ -197,6 +233,9 @@ class Handler(BaseHTTPRequestHandler):
                 return self._error(str(exc), HTTPStatus.UNPROCESSABLE_ENTITY)
             except ConversionError as exc:
                 return self._error(str(exc), HTTPStatus.INTERNAL_SERVER_ERROR)
+            except Exception as exc:
+                traceback.print_exc()  # goes to the log file in the desktop app
+                return self._error(f"Unexpected error: {exc}", HTTPStatus.INTERNAL_SERVER_ERROR)
 
             size = result.output.stat().st_size
             filename = result.output.name
@@ -224,7 +263,59 @@ def make_server(engine: Engine, host: str = "127.0.0.1", port: int = 0) -> Threa
     )
     server = ThreadingHTTPServer((host, port), handler)
     server.daemon_threads = True
+    server.state_lock = threading.Lock()
+    server.tabs = {}  # tab id -> when it last pinged
+    server.active = 0
+    server.last_activity = time.monotonic()
+    server.ever_connected = False
     return server
+
+
+def watch_idle(
+    server: ThreadingHTTPServer,
+    *,
+    startup_grace: float = 60,
+    close_grace: float = 8,
+    stale_after: float = 300,
+    poll: float = 1,
+) -> None:
+    """Shut the server down once no window has it open, so closing the app quits it.
+
+    Pages ping every 15 seconds and say goodbye when closed. Background tabs can be
+    throttled to one timer a minute, hence the generous ``stale_after``. The server
+    also gives up if no page shows up within ``startup_grace`` (the browser failed to
+    open), and never stops while a request is in flight.
+    """
+    started = time.monotonic()
+    while True:
+        time.sleep(poll)
+        now = time.monotonic()
+        with server.state_lock:
+            for tab, seen in list(server.tabs.items()):
+                if now - seen > stale_after:
+                    del server.tabs[tab]
+            if server.active or server.tabs:
+                continue
+            if not server.ever_connected and now - started < startup_grace:
+                continue
+            if server.ever_connected and now - server.last_activity < close_grace:
+                continue
+        server.shutdown()
+        return
+
+
+def find_running(port: int = DEFAULT_PORT) -> str | None:
+    """The URL of a Rotary already serving on ``port``, if there is one."""
+    url = f"http://127.0.0.1:{port}/"
+    # Bypass proxies: work PCs often have one configured, and it must not see localhost.
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+    try:
+        with opener.open(url + "api/ping", timeout=1.5) as res:
+            if res.headers.get("Server", "").startswith("Rotary/") and json.load(res).get("ok"):
+                return url
+    except (OSError, ValueError):
+        pass
+    return None
 
 
 def serve(engine: Engine, host: str = "127.0.0.1", port: int | None = None, open_browser: bool = True) -> None:

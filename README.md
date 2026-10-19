@@ -15,7 +15,33 @@ Rotary is running at http://127.0.0.1:8765/  (Ctrl+C to stop)
 
 When there's no direct converter between two formats, Rotary chains converters together. For example, Markdown → PDF is Pandoc (Markdown → DOCX) followed by LibreOffice (DOCX → PDF). Run `rotary route md pdf` to see the route it picks.
 
-## Install
+## The desktop app (Windows)
+
+1. Download **Rotary-Setup-0.2.0.exe** (see [where to download](#where-to-download) below).
+2. Double-click it and press **Install**. It installs just for you, so you don't need an administrator password.
+3. Click the **Rotary** icon on your desktop.
+
+Rotary opens in its own window. When you're done, close the window and Rotary shuts itself down. Clicking the icon while it's already open just brings up another window.
+
+FFmpeg and Pandoc are built in, so images, audio, video, PDFs, data files, archives and Markdown/HTML documents all work straight away. Word, Excel and PowerPoint conversions also need [LibreOffice](https://www.libreoffice.org/download/) (free). If it's installed, Rotary finds it automatically.
+
+### Where to download
+
+* **Releases:** once a version is tagged (e.g. `v0.2.0`), the installer is attached to that release on the repository's Releases page.
+* **Latest build:** open the **Actions** tab, then the newest green **Windows app** run, then **Artifacts → Rotary-Windows**. You get a zip containing the installer and a portable version.
+
+### Using it on a work PC
+
+* **Your files never leave the computer.** Rotary runs entirely on your PC and needs no internet connection.
+* Windows may say **"Windows protected your PC"** the first time, because the app isn't code-signed. Click **More info → Run anyway**. Some companies block unsigned apps altogether, in which case IT has to approve it. Two things help them:
+  * the source code in this repository
+  * the built-in check: run `Rotary.exe --selftest report.txt` and send them the report
+* If installers are blocked but apps aren't, use **Rotary-portable**: unzip it anywhere you like and double-click `Rotary.exe`. To get a desktop icon, right-click `Rotary.exe` → *Send to → Desktop (create shortcut)*.
+* If something goes wrong, there's a log at `%LOCALAPPDATA%\Rotary\rotary.log`.
+
+To build the app yourself on Windows, run `packaging\windows\build.ps1`. GitHub Actions also builds and tests it on every push (`.github/workflows/windows-app.yml`).
+
+## Install from source
 
 You need Python 3.11 or newer.
 
@@ -34,7 +60,7 @@ That's enough for images, PDFs, structured data and archives. Audio, video and d
 | Word, Excel, PowerPoint, PDF export | LibreOffice | `brew install --cask libreoffice` | `winget install TheDocumentFoundation.LibreOffice` | `sudo apt install libreoffice` |
 | iPhone HEIC photos | pillow-heif | `pip install pillow-heif` | same | same |
 
-`rotary backends` shows which of these Rotary found.
+`rotary backends` shows which of these Rotary found. `rotary-app` opens the same app window as the desktop icon.
 
 ## The web interface
 
@@ -105,8 +131,13 @@ rotary/
   engine.py           builds a graph of every available conversion and finds the cheapest route
   converters/         one module per backend; each declares edges (src -> dst, cost) and converts
   cli.py              the command line
+  app.py              the desktop launcher: app window, single instance, quits when closed
+  selftest.py         the --selftest check
   web/server.py       standard-library HTTP server for the UI
   web/static/         the single-page rotary-dial interface (no external assets)
+packaging/
+  make_icon.py        draws rotary.ico / rotary.png
+  windows/            PyInstaller recipe, Inno Setup installer, build and download scripts
 ```
 
 Each converter lists the conversions it can do as *edges*, each with a cost. Slow or lossy backends cost more, so a direct Pillow conversion beats a LibreOffice round trip. The engine runs Dijkstra's algorithm over these edges, with two extra rules:

@@ -241,6 +241,11 @@ footer .be::before { content: ""; width: 7px; height: 7px; border-radius: 50%; b
 footer .be.off { color: var(--faint); }
 footer .be.off::before { background: var(--faint); }
 
+.closed {
+  position: sticky; top: 0; z-index: 10; padding: 10px 16px; text-align: center; font-size: 14px;
+  background: var(--text); color: var(--bg);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .knob, .bar i { transition: none; }
   .file.converting .bar i { animation: none; width: 100% !important; opacity: .5; }
@@ -248,6 +253,7 @@ footer .be.off::before { background: var(--faint); }
 </style>
 </head>
 <body>
+<div class="closed" id="closed" role="alert" hidden>Rotary has closed. Open it again from its desktop icon, then reload this page.</div>
 <div class="wrap">
   <header>
     <svg viewBox="0 0 34 34" aria-hidden="true">
@@ -792,6 +798,21 @@ dial.addEventListener("keydown", (e) => {
   else if (e.key === "End") { e.preventDefault(); select(n - 1); }
   else if (e.key === "Enter") { e.preventDefault(); convertAll(); }
 });
+
+// Heartbeat: the desktop app quits once no window has pinged it for a while.
+const TAB = (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2));
+async function ping() {
+  try {
+    const res = await fetch("/api/ping?tab=" + TAB, { cache: "no-store" });
+    $("closed").hidden = res.ok;
+  } catch {
+    $("closed").hidden = false;
+  }
+}
+setInterval(ping, 15000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) ping(); });
+addEventListener("pagehide", () => navigator.sendBeacon("/api/bye?tab=" + TAB));
+ping();
 
 boot().catch((err) => {
   $("big").textContent = "Offline";

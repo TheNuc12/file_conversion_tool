@@ -1,6 +1,6 @@
 """Rotary: one tool to convert files between formats."""
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 from .converters import ConversionError, Options  # noqa: E402
 from .engine import Engine, NoRouteError, Result, Route, RotaryError  # noqa: E402

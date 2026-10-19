@@ -6,3 +6,7 @@ dist/
 .venv/
 venv/
 .pytest_cache/
+packaging/windows/tools/
+packaging/windows/test-tools/
+packaging/windows/downloads/
+packaging/windows/Output/

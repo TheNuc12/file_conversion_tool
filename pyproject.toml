@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rotary-convert"
-version = "0.1.0"
+version = "0.2.0"
 description = "Convert files between image, audio, video, document, spreadsheet, data and archive formats, from the command line or a rotary-dial web UI."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -22,6 +22,9 @@ test = ["pytest>=8", "playwright>=1.40"]
 
 [project.scripts]
 rotary = "rotary.cli:main"
+
+[project.gui-scripts]
+rotary-app = "rotary.app:main"
 
 [tool.setuptools.packages.find]
 include = ["rotary*"]

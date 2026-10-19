@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
@@ -69,6 +70,11 @@ class Converter:
         ]
 
 
+# The desktop app has no console, and without this flag Windows would flash one up
+# for every FFmpeg or Pandoc call.
+NO_WINDOW = {"creationflags": subprocess.CREATE_NO_WINDOW} if sys.platform == "win32" else {}
+
+
 def run(cmd: list[str], *, what: str, timeout: float | None = None, cwd: Path | None = None) -> str:
     """Run an external tool, turning failures into a readable ConversionError."""
     try:
@@ -80,6 +86,7 @@ def run(cmd: list[str], *, what: str, timeout: float | None = None, cwd: Path | 
             errors="replace",
             timeout=timeout,
             cwd=cwd,
+            **NO_WINDOW,
         )
     except FileNotFoundError as exc:
         raise ConversionError(f"{what} is not installed ({cmd[0]} not found)") from exc

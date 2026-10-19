@@ -1,0 +1,123 @@
+name: Windows app
+
+# Builds Rotary.exe and Rotary-Setup.exe on Windows, tests both, and uploads them.
+# Pushing a tag like v0.2.0 also publishes them as a GitHub release.
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write  # only used to publish releases for tags
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Python packages
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ".[heic,test]" pyinstaller
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
+      - name: Download FFmpeg and Pandoc (checksum-pinned)
+        run: packaging/windows/get-tools.ps1
+
+      - name: Run the test suite on Windows
+        run: |
+          $env:PATH = "$PWD\packaging\windows\tools;$PWD\packaging\windows\test-tools;$env:PATH"
+          python -m pytest -q -m "not slow"
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
+      - name: Build Rotary.exe
+        run: |
+          python -m PyInstaller --noconfirm packaging/windows/rotary.spec
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          "VERSION=$(python -c 'import rotary; print(rotary.__version__)')" >> $env:GITHUB_ENV
+
+      - name: Self-test the built app
+        run: |
+          $p = Start-Process dist\Rotary\Rotary.exe -ArgumentList "--selftest", "selftest.txt" -Wait -PassThru
+          Get-Content selftest.txt
+          if ($p.ExitCode -ne 0) { throw "self-test failed" }
+
+      - name: Check the built app serves the interface
+        run: |
+          $app = Start-Process dist\Rotary\Rotary.exe -ArgumentList "--no-window" -PassThru
+          $info = $null
+          foreach ($i in 1..60) {
+            try { $info = Invoke-RestMethod http://127.0.0.1:8765/api/formats; break } catch { Start-Sleep 1 }
+          }
+          if (-not $info) {
+            Get-Content "$env:LOCALAPPDATA\Rotary\rotary.log" -ErrorAction SilentlyContinue
+            throw "Rotary.exe never started serving"
+          }
+          "Rotary $($info.version): " + (($info.backends | ForEach-Object { "$($_.label)=$($_.available)" }) -join ", ")
+          python -c "from PIL import Image; Image.new('RGB', (40, 30), 'red').save('probe.png')"
+          Invoke-WebRequest -Method Post -Uri "http://127.0.0.1:8765/api/convert?name=probe.png&to=jpg" `
+            -InFile probe.png -Headers @{ "X-Rotary" = "1" } -OutFile probe.jpg
+          if ((Get-Item probe.jpg).Length -lt 100) { throw "conversion through the app failed" }
+          # Clicking the icon again should hand over to the running copy and exit at once.
+          $second = Start-Process dist\Rotary\Rotary.exe -ArgumentList "--no-window" -Wait -PassThru
+          if ($second.ExitCode -ne 0) { throw "second launch failed" }
+          Stop-Process $app
+
+      - name: Build the installer
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          & $iscc "/DAppVersion=$env:VERSION" packaging\windows\rotary.iss
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
+      - name: Test the installer (silent install, shortcut, self-test, uninstall)
+        run: |
+          $setup = "packaging\windows\Output\Rotary-Setup-$env:VERSION.exe"
+          $p = Start-Process $setup -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "installer exited with $($p.ExitCode)" }
+          $installed = "$env:LOCALAPPDATA\Programs\Rotary\Rotary.exe"
+          $shortcut = Join-Path ([Environment]::GetFolderPath("Desktop")) "Rotary.lnk"
+          if (-not (Test-Path $installed)) { throw "Rotary.exe not found at $installed" }
+          if (-not (Test-Path $shortcut)) { throw "no desktop shortcut at $shortcut" }
+          $target = (New-Object -ComObject WScript.Shell).CreateShortcut($shortcut).TargetPath
+          if ($target -ne $installed) { throw "shortcut points at $target" }
+          $t = Start-Process $installed -ArgumentList "--selftest", "installed.txt" -Wait -PassThru
+          Get-Content installed.txt
+          if ($t.ExitCode -ne 0) { throw "installed app failed its self-test" }
+          Start-Process "$env:LOCALAPPDATA\Programs\Rotary\unins000.exe" -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES" -Wait
+          foreach ($i in 1..30) { if (-not (Test-Path $shortcut)) { break }; Start-Sleep 1 }
+          if (Test-Path $shortcut) { throw "uninstall left the desktop shortcut behind" }
+          "Installer OK: $((Get-Item $setup).Length / 1MB -as [int]) MB"
+
+      - name: Package the portable version
+        run: |
+          7z a -tzip "Rotary-portable-$env:VERSION.zip" .\dist\Rotary
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Rotary-Windows
+          path: |
+            packaging/windows/Output/Rotary-Setup-*.exe
+            Rotary-portable-*.zip
+          if-no-files-found: error
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" packaging/windows/Output/Rotary-Setup-*.exe Rotary-portable-*.zip \
+            --title "Rotary $GITHUB_REF_NAME" \
+            --notes "Download **Rotary-Setup-$VERSION.exe**, double-click it, and open Rotary from the icon on your desktop. No administrator rights needed. Rotary-portable is the same app as a zip you can run without installing."
