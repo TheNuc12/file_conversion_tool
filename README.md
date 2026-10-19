@@ -27,7 +27,7 @@ FFmpeg and Pandoc are built in, so images, audio, video, PDFs, data files, archi
 
 ### Where to download
 
-* **The installer:** https://github.com/TheNuc12/file_conversion_tool/releases/latest/download/Rotary-Setup.exe always downloads the newest version.
+* **The installer:** https://github.com/TheNuc12/file_conversion_tool/releases/latest/download/Rotary-Setup.exe always downloads the newest version. While the repository is private, sign in to GitHub first.
 * **Without installing:** [Rotary-portable.zip](https://github.com/TheNuc12/file_conversion_tool/releases/latest/download/Rotary-portable.zip) is the same app. Unzip it and run `Rotary.exe`.
 * **Release notes and older versions:** the [Releases page](https://github.com/TheNuc12/file_conversion_tool/releases).
 
