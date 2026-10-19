@@ -1,7 +1,8 @@
 name: Windows app
 
 # Builds Rotary.exe and Rotary-Setup.exe on Windows, tests both, and uploads them.
-# Pushing a tag like v0.2.0 also publishes them as a GitHub release.
+# Pushing a tag like v0.4.0 also publishes them as a GitHub release, with fixed file
+# names so .../releases/latest/download/Rotary-Setup.exe always fetches the newest.
 on:
   push:
     branches: ["**"]
@@ -118,6 +119,15 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" packaging/windows/Output/Rotary-Setup-*.exe Rotary-portable-*.zip \
-            --title "Rotary $GITHUB_REF_NAME" \
-            --notes "Download **Rotary-Setup-$VERSION.exe**, double-click it, and open Rotary from the icon on your desktop. No administrator rights needed. Rotary-portable is the same app as a zip you can run without installing."
+          if [ "$GITHUB_REF_NAME" != "v$VERSION" ]; then
+            echo "Tag $GITHUB_REF_NAME doesn't match the app version $VERSION"; exit 1
+          fi
+          cp "packaging/windows/Output/Rotary-Setup-$VERSION.exe" Rotary-Setup.exe
+          cp "Rotary-portable-$VERSION.zip" Rotary-portable.zip
+          gh release create "$GITHUB_REF_NAME" Rotary-Setup.exe Rotary-portable.zip \
+            --title "Rotary $VERSION" \
+            --notes "**Install:** download **Rotary-Setup.exe**, double-click it and press Install. No administrator rights needed. Then open Rotary from the icon on your desktop.
+
+          **Portable:** Rotary-portable.zip is the same app without installing. Unzip it and double-click Rotary.exe.
+
+          Permanent link to the newest installer: https://github.com/$GITHUB_REPOSITORY/releases/latest/download/Rotary-Setup.exe"

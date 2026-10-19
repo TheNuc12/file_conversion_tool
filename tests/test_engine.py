@@ -142,11 +142,11 @@ def test_real_graph_has_no_nonsense_routes(engine):
 
 
 def test_word_to_pdf_never_goes_through_plain_text():
-    # Without LibreOffice there is no faithful DOCX -> PDF, and DOCX -> TXT -> PDF would
-    # silently drop all formatting, so it must not be offered at all.
+    # Without Microsoft Office or LibreOffice there is no faithful DOCX -> PDF, and
+    # DOCX -> TXT -> PDF would silently drop all formatting, so it must not be offered.
     from rotary.converters import default_converters
 
-    engine = Engine([c for c in default_converters() if c.name != "office"])
+    engine = Engine([c for c in default_converters() if c.name not in ("office", "msoffice")])
     assert "pdf" not in engine.routes_from("docx")
     if "pdf" in engine.routes_from("txt"):
         assert engine.route("txt", "pdf").formats == ["txt", "pdf"]

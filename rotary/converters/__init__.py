@@ -4,6 +4,7 @@ from .data import DataConverter
 from .documents import DocumentConverter
 from .images import ImageConverter
 from .media import MediaConverter
+from .msoffice import MicrosoftOfficeConverter
 from .office import OfficeConverter
 from .pdf import PdfConverter
 
@@ -17,6 +18,7 @@ def default_converters() -> list[Converter]:
         PdfConverter(),
         MediaConverter(),
         DocumentConverter(),
+        MicrosoftOfficeConverter(),
         OfficeConverter(),
     ]
 

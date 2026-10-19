@@ -88,6 +88,17 @@ def run(report: Path) -> int:
     lines.append("")
 
     failures = 0
+    if sys.platform == "win32":
+        # Needed to drive Microsoft Office. Checked even without Office installed, so a
+        # packaging mistake shows up here rather than as "Office not found" on someone's PC.
+        try:
+            import pythoncom  # noqa: F401
+            import win32com.client  # noqa: F401
+
+            lines.append("ok   Office automation (pywin32) is available")
+        except ImportError as exc:
+            failures += 1
+            lines.append(f"FAIL Office automation (pywin32): {exc}")
     with tempfile.TemporaryDirectory(prefix="rotary-selftest-") as tmp:
         samples = _samples(Path(tmp))
         for src, dst in CHECKS:

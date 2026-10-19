@@ -10,7 +10,7 @@ here = Path(SPECPATH)
 datas = collect_data_files("rotary")  # the web interface
 datas += [(str(exe), "tools") for exe in (here / "tools").glob("*.exe")]  # FFmpeg, Pandoc
 binaries = []
-hiddenimports = []
+hiddenimports = ["win32timezone"]  # pywin32 imports it lazily when COM hands back dates
 # Packages with native libraries or plugins that static analysis can miss.
 for package in ("pillow_heif", "pypdfium2", "pypdfium2_raw"):
     try:

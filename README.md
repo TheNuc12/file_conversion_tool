@@ -17,18 +17,21 @@ When there's no direct converter between two formats, Rotary chains converters t
 
 ## The desktop app (Windows)
 
-1. Download **Rotary-Setup-0.3.0.exe** (see [where to download](#where-to-download) below).
+1. Download **[Rotary-Setup.exe](https://github.com/TheNuc12/file_conversion_tool/releases/latest/download/Rotary-Setup.exe)**.
 2. Double-click it and press **Install**. It installs just for you, so you don't need an administrator password.
 3. Click the **Rotary** icon on your desktop.
 
 Rotary opens in its own window. When you're done, close the window and Rotary shuts itself down. Clicking the icon while it's already open just brings up another window.
 
-FFmpeg and Pandoc are built in, so images, audio, video, PDFs, data files, archives and Markdown/HTML documents all work straight away. Word, Excel and PowerPoint conversions also need [LibreOffice](https://www.libreoffice.org/download/) (free). If it's installed, Rotary finds it automatically.
+FFmpeg and Pandoc are built in, so images, audio, video, PDFs, data files, archives and Markdown/HTML documents all work straight away. **Word, Excel and PowerPoint files are converted with Microsoft Office** (for example Word → PDF), which most work PCs already have. Rotary runs Office invisibly in the background with macros turned off, and never touches Office windows you have open. If a PC has no Office, Rotary uses [LibreOffice](https://www.libreoffice.org/download/) instead, if that's installed.
 
 ### Where to download
 
-* **Releases:** once a version is tagged (e.g. `v0.2.0`), the installer is attached to that release on the repository's Releases page.
-* **Latest build:** open the **Actions** tab, then the newest green **Windows app** run, then **Artifacts → Rotary-Windows**. You get a zip containing the installer and a portable version.
+* **The installer:** https://github.com/TheNuc12/file_conversion_tool/releases/latest/download/Rotary-Setup.exe always downloads the newest version.
+* **Without installing:** [Rotary-portable.zip](https://github.com/TheNuc12/file_conversion_tool/releases/latest/download/Rotary-portable.zip) is the same app. Unzip it and run `Rotary.exe`.
+* **Release notes and older versions:** the [Releases page](https://github.com/TheNuc12/file_conversion_tool/releases).
+
+To publish a new version, bump `version` in `pyproject.toml` and `rotary/__init__.py`, then push a matching tag (`git tag v0.5.0 && git push origin v0.5.0`). The Windows workflow builds, tests and publishes it.
 
 ### Using it on a work PC
 
@@ -81,7 +84,7 @@ That's enough for images, PDFs, structured data and archives. Audio, video and d
 | --- | --- | --- | --- | --- |
 | Audio & video | FFmpeg | `brew install ffmpeg` | `winget install Gyan.FFmpeg` | `sudo apt install ffmpeg` |
 | Markdown, HTML, EPUB, LaTeX… | Pandoc | `brew install pandoc` | `winget install JohnMacFarlane.Pandoc` | `sudo apt install pandoc` |
-| Word, Excel, PowerPoint, PDF export | LibreOffice | `brew install --cask libreoffice` | `winget install TheDocumentFoundation.LibreOffice` | `sudo apt install libreoffice` |
+| Word, Excel, PowerPoint (if there's no Microsoft Office) | LibreOffice | `brew install --cask libreoffice` | `winget install TheDocumentFoundation.LibreOffice` | `sudo apt install libreoffice` |
 | iPhone HEIC photos | pillow-heif | `pip install pillow-heif` | same | same |
 
 `rotary backends` shows which of these Rotary found. `rotary-app` opens the same app window as the desktop icon.
@@ -133,7 +136,8 @@ Rotary never overwrites an existing file unless you pass `--overwrite`. It exits
 | Audio | MP3, WAV, FLAC, OGG, Opus, AAC, M4A, WMA, AIFF, AC3 | FFmpeg |
 | Video | MP4, MKV, WebM, MOV, AVI, FLV, WMV, MPEG, OGV, 3GP, TS; video → audio, → GIF, → thumbnail PNG/JPG; animated GIF → video | FFmpeg |
 | Documents | Markdown, HTML, DOCX, ODT, RTF, reStructuredText, LaTeX, EPUB, Org, AsciiDoc, MediaWiki, Jupyter, plain text | Pandoc |
-| Office | DOC/DOCX/ODT/RTF/TXT/HTML → PDF and each other; XLS/XLSX/ODS/CSV → PDF and each other; PPT/PPTX/ODP → PDF and each other; PDF → DOCX/ODT | LibreOffice |
+| Office | DOC/DOCX/ODT/RTF/TXT/HTML → PDF and each other; XLS/XLSX/ODS → PDF, CSV, HTML and each other; PPT/PPTX/ODP → PDF and each other | Microsoft Office (Windows), else LibreOffice |
+| PDF → Word | PDF → DOCX/ODT, as positioned text boxes | LibreOffice |
 | PDF | PDF → any image format (pick a page), PDF → text | pdfium |
 | Data | JSON, YAML, TOML, XML, CSV, TSV, XLSX: any to any | built in |
 | Archives | ZIP, TAR, TAR.GZ, TAR.BZ2, TAR.XZ: any to any | built in |
