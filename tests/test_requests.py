@@ -118,6 +118,50 @@ def test_drawn_signature_and_tick_are_read_from_the_page(copies):
     assert result.values["c1"] == {"value": "true"}
 
 
+def add_drawing(data: bytes, page: int, rect, points, *, subtype="/Ink", appearance=True) -> bytes:
+    """Add a drawing as an annotation, the way Edge's Draw, Mac Preview, iPhone Markup and Firefox save one."""
+    from pypdf.generic import ArrayObject, DecodedStreamObject, DictionaryObject, FloatObject, NameObject, NumberObject
+
+    def nums(values):
+        return ArrayObject(FloatObject(v) for v in values)
+
+    writer = PdfWriter(clone_from=PdfReader(io.BytesIO(data)))
+    annot = DictionaryObject({
+        NameObject("/Type"): NameObject("/Annot"), NameObject("/Subtype"): NameObject(subtype),
+        NameObject("/Rect"): nums(rect), NameObject("/C"): nums([0, 0, 0.5]), NameObject("/F"): NumberObject(4),
+        NameObject("/BS"): DictionaryObject({NameObject("/W"): NumberObject(2)}),
+    })
+    if subtype == "/Ink":
+        annot[NameObject("/InkList")] = ArrayObject([nums(points)])
+    if appearance:
+        stream = DecodedStreamObject()
+        path = " ".join(f"{x} {y} {'m' if i == 0 else 'l'}" for i, (x, y) in enumerate(zip(points[::2], points[1::2])))
+        stream.set_data(f"0 0 0.5 RG 2 w 1 J 1 j {path} S".encode())
+        stream.update({NameObject("/Type"): NameObject("/XObject"), NameObject("/Subtype"): NameObject("/Form"),
+                       NameObject("/BBox"): nums(rect)})
+        annot[NameObject("/AP")] = DictionaryObject({NameObject("/N"): writer._add_object(stream)})
+    writer.pages[page].setdefault(NameObject("/Annots"), ArrayObject()).append(writer._add_object(annot))
+    return save(writer)
+
+
+@pytest.mark.parametrize("subtype,appearance", [("/Ink", True), ("/Ink", False), ("/Stamp", True)])
+def test_signatures_drawn_as_annotations_are_read(copies, subtype, appearance):
+    # Grace's signature box on page 1 of her copy spans x 337-520, y 190-238 (PDF points).
+    ticked = fill(copies[1], 2, {f"rotary_{REQ}_1_c1": "/Yes"})
+    back = add_drawing(ticked, 1, (340, 195, 510, 235), [345, 200, 380, 230, 420, 198, 460, 228, 505, 205],
+                       subtype=subtype, appearance=appearance)
+    result = local.read_return(copies[1], back, mine(1), request_id=REQ, signer=1, signer_names=NAMES)
+    assert result.issues == []
+    assert result.values["s1"]["value"].startswith("data:image/png;base64,")
+
+
+def test_an_annotation_outside_the_fields_is_caught(copies):
+    ticked = fill(copies[1], 2, {f"rotary_{REQ}_1_c1": "/Yes"})
+    back = add_drawing(ticked, 1, (60, 500, 240, 560), [70, 510, 120, 550, 170, 512, 230, 548])
+    result = local.read_return(copies[1], back, mine(1), request_id=REQ, signer=1, signer_names=NAMES)
+    assert result.issues == ["Page 1 has changes outside the signing fields.", "Missing a signature on page 1."]
+
+
 def test_missing_required_fields_are_reported(copies):
     result = local.read_return(copies[1], copies[1], mine(1), request_id=REQ, signer=1, signer_names=NAMES)
     assert result.issues == ["Missing a signature on page 1.", "Missing a required tick box on page 2."]
