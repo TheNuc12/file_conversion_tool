@@ -54,7 +54,18 @@ To build the app yourself on Windows, run `packaging\windows\build.ps1`. GitHub 
 
 Nothing leaves the computer.
 
-**Send documents to other people to sign.** This is the Rotary Sign server, which your company runs, either as a Docker container or as plain Python on a server.
+**Get other people's signatures, no server needed.** Switch the desktop app to **Get signatures**.
+
+1. Drop in a PDF, add each signer's name and email, and place their fields on the pages.
+2. Press **Create signing copies**. Rotary makes a fillable PDF for each signer, with a page of instructions at the front.
+3. Press **Email (Outlook)** next to a signer. Outlook opens a new email with their copy attached; check it and press Send. Without classic Outlook, press **Download copy** and then **Email**, and attach the copy to the email yourself.
+4. The signer fills in their copy in Adobe Acrobat Reader or Microsoft Edge, saves it and emails it back.
+5. Press **Add their signed copy** for each one that comes back. Rotary reads what they filled in and warns you if anything is missing, if the document was changed outside the signing fields, or if it's someone else's copy.
+6. When everyone has signed, press **Finish**. Rotary stamps every signature onto your original PDF and adds a certificate page saying who signed what and when. It can also seal the PDF with a digital signature, so any later change shows up.
+
+Everything stays on your PC and in your own email. The record is lighter than the server's: Rotary knows whose copy came back and what was in it, but not who actually filled it in.
+
+**Send documents to other people to sign, with a server.** This is the Rotary Sign server, which your company runs, either as a Docker container or as plain Python on a server.
 
 * **Senders** (your staff) log in, upload a PDF, add signers, drag fields onto the pages and send.
 * **Signers** get an email link. They agree to sign electronically and sign in their browser, with no account needed. Signers can go in order or all at once.

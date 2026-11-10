@@ -29,12 +29,15 @@ from .. import __version__, formats
 from ..converters import ConversionError, Options
 from ..engine import Engine, RotaryError
 from ..formats import CATEGORIES, FORMATS
+from ..sign.local import RequestStore
+from .requests_api import RequestsAPI
 
 DEFAULT_PORT = 8765
 MAX_UPLOAD = 4 * 1024**3  # 4 GiB
 MAX_SIGN_UPLOAD = 100 * 1024**2  # PDFs to sign, and the fields posted back
 OPEN_SIGN_DOCS = 8  # PDFs kept in memory for the Sign tab
 SIGN_STATIC = {"rsign.js": "text/javascript; charset=utf-8", "rsign.css": "text/css; charset=utf-8"}
+APP_STATIC = {"requests.js": "text/javascript; charset=utf-8"}
 CHUNK = 1024 * 1024
 LOOPBACK = {"127.0.0.1", "localhost", "::1", "[::1]"}
 
@@ -52,7 +55,7 @@ def _int(value: str | None) -> int | None:
         return None
 
 
-class Handler(BaseHTTPRequestHandler):
+class Handler(RequestsAPI, BaseHTTPRequestHandler):
     server_version = f"Rotary/{__version__}"
     engine: Engine
     allow_any_host = False
@@ -111,6 +114,11 @@ class Handler(BaseHTTPRequestHandler):
             return self._targets(parse_qs(url.query))
         if url.path == "/api/sign/page":
             return self._sign_page(parse_qs(url.query))
+        if url.path == "/api/requests" or url.path.startswith("/api/requests/"):
+            return self._requests("GET", url)
+        if url.path.startswith("/app-static/") and url.path.rsplit("/", 1)[1] in APP_STATIC:
+            name = url.path.rsplit("/", 1)[1]
+            return self._static(name, APP_STATIC[name])
         if url.path.startswith("/sign-static/") and url.path.rsplit("/", 1)[1] in SIGN_STATIC:
             name = url.path.rsplit("/", 1)[1]
             return self._static(name, SIGN_STATIC[name], package="rotary.sign")
@@ -134,6 +142,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._sign_open(parse_qs(url.query))
         if url.path == "/api/sign/apply":
             return self._sign_apply(parse_qs(url.query))
+        if url.path == "/api/requests" or url.path.startswith("/api/requests/"):
+            return self._requests("POST", url)
         return self._error("Not found", HTTPStatus.NOT_FOUND)
 
     def _ping(self, query: dict) -> None:
@@ -350,7 +360,7 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(signed)
 
 
-def make_server(engine: Engine, host: str = "127.0.0.1", port: int = 0) -> ThreadingHTTPServer:
+def make_server(engine: Engine, host: str = "127.0.0.1", port: int = 0, data_dir: Path | None = None) -> ThreadingHTTPServer:
     handler = type(
         "RotaryHandler",
         (Handler,),
@@ -364,6 +374,11 @@ def make_server(engine: Engine, host: str = "127.0.0.1", port: int = 0) -> Threa
     server.last_activity = time.monotonic()
     server.ever_connected = False
     server.sign_docs = OrderedDict()  # Sign tab: doc id -> prepared PDF
+    if data_dir is None:
+        from ..app import data_dir as app_data_dir
+
+        data_dir = app_data_dir()
+    server.request_store = RequestStore(Path(data_dir) / "requests")  # Get signatures tab
     return server
 
 

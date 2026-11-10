@@ -175,7 +175,16 @@ def _draw(c, field: Field, width: float, height: float) -> None:
         return
     x, w, h = field.x * width, field.w * width, field.h * height
     y = height - (field.y + field.h) * height  # PDF measures from the bottom
-    if field.kind in ("signature", "initials"):
+    drawn = field.value.startswith("data:")  # a picture: a drawn signature, or handwriting read off a returned copy
+    if field.kind in ("signature", "initials") and not drawn:
+        # A typed signature, e.g. typed into a returned PDF's signature box.
+        text = field.value.replace("\n", " ")
+        size = min(h * 0.72, 26)
+        while size > 4 and stringWidth(text, "Helvetica-Oblique", size) > w - 2:
+            size -= 0.25
+        c.setFont("Helvetica-Oblique", size)
+        c.drawString(x + 1, y + (h - size * 0.7) / 2, text)
+    elif drawn:
         image = signature_image(field.value)
         iw, ih = image.getSize()
         scale = min(w / iw, h / ih)
@@ -275,7 +284,7 @@ def certificate(record: dict) -> bytes:
     t.setStyle(TableStyle([("GRID", (0, 0), (-1, -1), 0.4, colors.HexColor("#bbbbbb")), ("VALIGN", (0, 0), (-1, -1), "TOP")]))
     story += [t, Spacer(1, 6 * mm), Paragraph("Signers", styles["Heading3"])]
 
-    rows = [[cell("Name"), cell("Email"), cell("Signed (UTC)"), cell("IP address"), cell("Browser")]]
+    rows = [[cell("Name"), cell("Email"), cell("Signed (UTC)"), cell(record.get("ip_heading", "IP address")), cell(record.get("agent_heading", "Browser"))]]
     for s in record.get("signers", []):
         rows.append([cell(s.get("name")), cell(s.get("email")), cell(s.get("signed_at")), cell(s.get("ip")), cell(s.get("user_agent"))])
     t = Table(rows, colWidths=[30 * mm, 42 * mm, 32 * mm, 24 * mm, 42 * mm], repeatRows=1)
@@ -287,15 +296,11 @@ def certificate(record: dict) -> bytes:
         rows.append([cell(e.get("at")), cell(e.get("actor")), cell(e.get("action")), cell(e.get("ip"))])
     t = Table(rows, colWidths=[34 * mm, 48 * mm, 64 * mm, 24 * mm], repeatRows=1)
     t.setStyle(grid)
-    story += [
-        t,
-        Spacer(1, 6 * mm),
-        Paragraph(
-            "Each signer agreed to sign electronically before signing. The document is sealed with a digital "
-            "signature: any change made after completion breaks the seal and is reported by PDF readers.",
-            small,
-        ),
-    ]
+    note = record.get("note") or (
+        "Each signer agreed to sign electronically before signing. The document is sealed with a digital "
+        "signature: any change made after completion breaks the seal and is reported by PDF readers."
+    )
+    story += [t, Spacer(1, 6 * mm), Paragraph(_escape(note), small)]
 
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4, title="Certificate of completion", leftMargin=20 * mm, rightMargin=20 * mm)

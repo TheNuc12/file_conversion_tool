@@ -270,6 +270,42 @@ header p { margin: 0; color: var(--muted); font-size: 14px; }
 .sign-status.bad { color: var(--bad); }
 .sign-status.ok { color: var(--ok); }
 
+/* ---------------------------------------------------------------- get signatures */
+.sign-side input[type="email"], .sign-side select { padding: 7px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel-2); width: 100%; }
+.sign-side input[type="text"] { width: 100%; }
+.req-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.req-item {
+  width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; text-align: left;
+  border: 1px solid var(--border); background: var(--panel); border-radius: 9px; padding: 8px 10px; cursor: pointer;
+}
+.req-item:hover { border-color: var(--accent); }
+.req-item strong { font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.req-chip { flex: none; font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
+.req-chip.signed, .req-chip.completed { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, var(--border)); }
+.req-chip.check { color: var(--bad); border-color: var(--bad); }
+.req-chip.out, .req-chip.waiting { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+.muted-note { font-size: 13px; color: var(--muted); margin: 0; }
+.req-intro { text-align: left; }
+.req-intro h3 { margin: 0 0 10px; color: var(--text); font-size: 18px; }
+.req-intro ol { margin: 0; padding-left: 20px; line-height: 1.6; color: var(--muted); max-width: 520px; }
+.req-title { margin: 0; font-weight: 600; }
+.signers { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.signers li { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 7px 9px; border: 1px solid var(--border); border-radius: 9px; background: var(--panel); }
+.signers .dot { width: 12px; height: 12px; border-radius: 50%; }
+.who { overflow: hidden; min-width: 0; }
+.who strong, .who span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.who span { font-size: 12px; color: var(--muted); }
+.add-signer { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.add-signer .tool { grid-column: 1 / 3; text-align: center; }
+.req-card { border: 1px solid var(--border); border-radius: 10px; padding: 10px; background: var(--panel); display: flex; flex-direction: column; gap: 8px; }
+.req-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.row-actions .tool { text-decoration: none; display: inline-flex; align-items: center; }
+.go.small-go { margin-top: 0; padding: 9px 12px; font-size: 14px; width: 100%; text-align: center; display: block; }
+.req-issues { border-left: 3px solid var(--bad); padding: 2px 10px; font-size: 13px; color: var(--bad); }
+.req-issues ul { margin: 0 0 4px; padding-left: 18px; }
+.linkish.danger { color: var(--bad); }
+
 footer { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--muted); justify-content: center; }
 footer .be { display: inline-flex; align-items: center; gap: 6px; }
 footer .be::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
@@ -303,6 +339,7 @@ footer .be.off::before { background: var(--faint); }
     <nav class="modes" role="tablist" aria-label="Mode">
       <button type="button" role="tab" id="tab-convert" aria-selected="true" aria-controls="convert-view">Convert</button>
       <button type="button" role="tab" id="tab-sign" aria-selected="false" aria-controls="sign-view">Sign a PDF</button>
+      <button type="button" role="tab" id="tab-requests" aria-selected="false" aria-controls="requests-view">Get signatures</button>
     </nav>
   </header>
 
@@ -333,6 +370,11 @@ footer .be.off::before { background: var(--faint); }
       <p class="sign-status" id="sign-status" role="status"></p>
     </aside>
     <div class="sign-doc" id="sign-doc"><div class="sign-empty">Open a PDF to sign it. It never leaves this computer.</div></div>
+  </section>
+
+  <section id="requests-view" class="sign-layout" role="tabpanel" aria-labelledby="tab-requests" hidden>
+    <aside class="panel sign-side" id="req-side"></aside>
+    <div id="req-main"></div>
   </section>
 
   <div class="deck" id="convert-view" role="tabpanel" aria-labelledby="tab-convert">
@@ -404,6 +446,7 @@ footer .be.off::before { background: var(--faint); }
 </div>
 
 <script src="/sign-static/rsign.js"></script>
+<script src="/app-static/requests.js"></script>
 <script>
 "use strict";
 const $ = (id) => document.getElementById(id);
@@ -799,17 +842,21 @@ function triggerDownload(f) {
 // ------------------------------------------------------------------ input wiring
 const drop = $("drop"), picker = $("picker");
 picker.addEventListener("change", () => { addFiles([...picker.files]); picker.value = ""; });
-const activeDrop = () => ($("sign-view").hidden ? drop : $("sign-drop"));
+const activeDrop = () => {
+  if (!$("sign-view").hidden) return $("sign-drop");
+  if (!$("requests-view").hidden) return $("req-drop") || document.createElement("div");
+  return drop;
+};
 ["dragenter", "dragover"].forEach((ev) => document.addEventListener(ev, (e) => { e.preventDefault(); activeDrop().classList.add("over"); }));
 ["dragleave", "drop"].forEach((ev) => document.addEventListener(ev, (e) => {
   e.preventDefault();
   if (ev === "dragleave" && e.relatedTarget) return;
-  drop.classList.remove("over");
-  $("sign-drop").classList.remove("over");
+  for (const zone of [drop, $("sign-drop"), $("req-drop")]) zone?.classList.remove("over");
 }));
 document.addEventListener("drop", (e) => {
   if (!e.dataTransfer?.files?.length) return;
   if (!$("sign-view").hidden) openForSigning(e.dataTransfer.files[0]);
+  else if (!$("requests-view").hidden) RotaryRequests.drop(e.dataTransfer.files[0]);
   else addFiles([...e.dataTransfer.files]);
 });
 
@@ -875,18 +922,20 @@ dial.addEventListener("keydown", (e) => {
 });
 
 // ------------------------------------------------------------------ modes
+const MODES = {
+  convert: ["tab-convert", "convert-view", "Drop in a file, turn the dial, get it back in the format you need."],
+  sign: ["tab-sign", "sign-view", "Sign a PDF yourself. Everything happens on this computer."],
+  requests: ["tab-requests", "requests-view", "Send a PDF to other people to sign, and collect their signatures."],
+};
 function showMode(mode) {
-  const sign = mode === "sign";
-  $("tab-convert").setAttribute("aria-selected", String(!sign));
-  $("tab-sign").setAttribute("aria-selected", String(sign));
-  $("convert-view").hidden = sign;
-  $("sign-view").hidden = !sign;
-  $("tagline").textContent = sign
-    ? "Sign a PDF yourself. Everything happens on this computer."
-    : "Drop in a file, turn the dial, get it back in the format you need.";
+  for (const [name, [tab, view]] of Object.entries(MODES)) {
+    $(tab).setAttribute("aria-selected", String(name === mode));
+    $(view).hidden = name !== mode;
+  }
+  $("tagline").textContent = MODES[mode][2];
+  if (mode === "requests") RotaryRequests.show();
 }
-$("tab-convert").addEventListener("click", () => showMode("convert"));
-$("tab-sign").addEventListener("click", () => showMode("sign"));
+for (const mode of Object.keys(MODES)) $(MODES[mode][0]).addEventListener("click", () => showMode(mode));
 
 // ------------------------------------------------------------------ sign a PDF
 const PREFS_KEY = "rotary.sign";

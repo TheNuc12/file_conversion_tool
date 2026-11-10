@@ -3,7 +3,7 @@
 # Produces dist/Rotary/ (Rotary.exe plus its _internal folder).
 from pathlib import Path
 
-from PyInstaller.utils.hooks import collect_all, collect_data_files
+from PyInstaller.utils.hooks import collect_all, collect_data_files, collect_submodules
 
 here = Path(SPECPATH)
 
@@ -11,6 +11,8 @@ datas = collect_data_files("rotary")  # the web interface
 datas += [(str(exe), "tools") for exe in (here / "tools").glob("*.exe")]  # FFmpeg, Pandoc
 binaries = []
 hiddenimports = ["win32timezone"]  # pywin32 imports it lazily when COM hands back dates
+# The seal on signed documents: pyHanko loads parts of itself lazily.
+hiddenimports += collect_submodules("pyhanko.sign") + collect_submodules("pyhanko_certvalidator")
 # Packages with native libraries or plugins that static analysis can miss.
 for package in ("pillow_heif", "pypdfium2", "pypdfium2_raw"):
     try:
@@ -26,8 +28,8 @@ a = Analysis(
     datas=datas,
     binaries=binaries,
     hiddenimports=hiddenimports,
-    # The signing server's libraries: the desktop app never imports them.
-    excludes=["tkinter", "pytest", "_pytest", "playwright", "flask", "werkzeug", "jinja2", "waitress", "pyhanko", "pyhanko_certvalidator"],
+    # The signing server's web libraries: the desktop app never imports them.
+    excludes=["tkinter", "pytest", "_pytest", "playwright", "flask", "werkzeug", "jinja2", "waitress"],
 )
 pyz = PYZ(a.pure)
 exe = EXE(

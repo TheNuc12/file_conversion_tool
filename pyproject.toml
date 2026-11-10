@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "rotary-convert"
-version = "0.4.0"
+version = "0.5.0"
 description = "Convert files between formats from a rotary-dial desktop app or the command line, and sign PDFs, locally or through a self-hosted signing server."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -15,12 +15,13 @@ dependencies = [
     "pypdfium2>=4.20",
     "reportlab>=4.0",
     "pypdf>=4.0",
+    "pyhanko>=0.25",  # tamper-evident seals on signed documents
     "pywin32>=306; sys_platform == 'win32'",  # drives Microsoft Office for Word/Excel/PowerPoint
 ]
 
 [project.optional-dependencies]
 heic = ["pillow-heif>=0.16"]
-server = ["flask>=3.0", "waitress>=3.0", "pyhanko>=0.25"]
+server = ["flask>=3.0", "waitress>=3.0"]
 test = ["pytest>=8", "playwright>=1.40"]
 
 [project.scripts]
